@@ -161,16 +161,18 @@ If you're using a custom Zotero data directory, you can find it in Zotero:
 ## How It Works
 
 1. **Initial Load**: On startup (with `preload = true`), the plugin reads your Zotero database and caches references
-2. **Caching**: References are cached to `~/.local/share/nvim/zotero-md-cache.json` for fast access
-3. **Auto-Update**: When opening markdown files, the cache automatically refreshes (max once per 5 minutes)
-4. **Smart Queries**: The plugin queries the Zotero SQLite database in read-only mode (safe to use while Zotero is running)
+2. **Database Copy**: Creates a temporary copy of the database to avoid lock issues (safe to use while Zotero is running)
+3. **Smart Caching**: References are cached to `~/.local/share/nvim/zotero-md-cache.json` for fast access
+4. **Auto-Update**: When opening markdown files, the cache automatically refreshes (max once per 5 minutes)
 5. **Markdown-Only**: The picker only activates in markdown files to prevent accidental insertions
 
 ## Troubleshooting
 
 ### "Database is locked" error
 
-This has been fixed in the latest version. The plugin now uses `-readonly` mode to query the database, which works even when Zotero is running.
+This has been fixed. The plugin creates a temporary copy of the Zotero database in Neovim's cache directory before querying it. This approach (borrowed from [zotcite](https://github.com/wellsdurant/zotcite)) completely avoids lock conflicts and works safely even when Zotero is running.
+
+The temporary copy is stored at `~/.local/share/nvim/zotero-md-temp.sqlite` (or your platform's cache directory) and is only updated when the original database changes.
 
 ### "No Zotero references found"
 

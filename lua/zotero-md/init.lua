@@ -78,10 +78,44 @@ local function write_cache(data)
   return true
 end
 
+-- Copy database to temp location to avoid locks
+local temp_db_path = nil
+local temp_db_mtime = 0
+
+local function get_temp_db()
+  local db_path = config.zotero_db_path
+
+  -- Get modification time of original database
+  local mtime = vim.fn.getftime(db_path)
+
+  -- Create temp path
+  local temp_dir = vim.fn.stdpath("cache")
+  local temp_path = temp_dir .. "/zotero-md-temp.sqlite"
+
+  -- Check if we need to update the temp copy
+  if temp_db_path ~= temp_path or mtime > temp_db_mtime then
+    -- Copy database file
+    local copy_success = vim.fn.system(string.format('cp "%s" "%s"', db_path, temp_path))
+    if vim.v.shell_error == 0 then
+      temp_db_path = temp_path
+      temp_db_mtime = mtime
+    else
+      return nil, "Failed to copy database to temp location"
+    end
+  end
+
+  return temp_db_path, nil
+end
+
 -- Execute SQLite query
 local function execute_sqlite_query(db_path, query)
-  -- Use -readonly flag to avoid database locks when Zotero is running
-  local cmd = string.format('sqlite3 -readonly "%s" "%s" 2>&1', db_path, query)
+  -- Use a temporary copy of the database to avoid lock issues
+  local actual_db_path, err = get_temp_db()
+  if not actual_db_path then
+    return nil, err or "Failed to access database"
+  end
+
+  local cmd = string.format('sqlite3 "%s" "%s" 2>&1', actual_db_path, query)
   local handle = io.popen(cmd)
   if not handle then
     return nil, "Failed to execute query"
