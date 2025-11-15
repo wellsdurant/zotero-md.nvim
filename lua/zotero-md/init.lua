@@ -225,7 +225,20 @@ local function load_references_from_db()
       itemTypes.typeName,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'title' THEN itemDataValues.value END) as title,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'date' THEN itemDataValues.value END) as date,
-      GROUP_CONCAT(CASE WHEN fields.fieldName = 'publicationTitle' THEN itemDataValues.value END) as publication,
+      COALESCE(
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'publicationTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'bookTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'proceedingsTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'conferenceName' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'programTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'blogTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'code' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'dictionaryTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'encyclopediaTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'forumTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'websiteTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'seriesTitle' THEN itemDataValues.value END)
+      ) as publication,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'url' THEN itemDataValues.value END) as url,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'extra' THEN itemDataValues.value END) as extra,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'abstractNote' THEN itemDataValues.value END) as abstract
