@@ -520,37 +520,51 @@ function M.pick_reference()
     previewer = previewers.new_buffer_previewer({
       define_preview = function(self, entry)
         local ref = entry.value
-        local lines = {}
 
-        -- Abbreviation (if present)
+        -- Build preview string with position tracking (zotcite approach)
+        local parts = {}
+        local highlights = {}
+        local pos = 0
+
+        -- (abbreviation) if present
         if ref.abbreviation and ref.abbreviation ~= "" then
-          table.insert(lines, ref.abbreviation)
-          table.insert(lines, "")
+          local abbr_text = "(" .. ref.abbreviation .. ") "
+          table.insert(parts, abbr_text)
+          table.insert(highlights, { group = "String", start_pos = pos, end_pos = pos + #abbr_text })
+          pos = pos + #abbr_text
         end
 
-        -- Title
-        table.insert(lines, ref.title or "")
-        table.insert(lines, "")
+        -- title,
+        local title = ref.title or "Untitled"
+        table.insert(parts, title .. ", ")
+        table.insert(highlights, { group = "Title", start_pos = pos, end_pos = pos + #title })
+        pos = pos + #title + 2
 
-        -- Year
-        if ref.year and ref.year ~= "" then
-          table.insert(lines, ref.year)
-          table.insert(lines, "")
+        -- year,
+        local year = ref.year or ""
+        if year ~= "" then
+          table.insert(parts, year .. ", ")
+          table.insert(highlights, { group = "Number", start_pos = pos, end_pos = pos + #year })
+          pos = pos + #year + 2
         end
 
-        -- Authors
-        if ref.authors and ref.authors ~= "" then
-          table.insert(lines, ref.authors)
-          table.insert(lines, "")
+        -- authors,
+        local authors = ref.authors or ""
+        if authors ~= "" then
+          table.insert(parts, authors .. ", ")
+          table.insert(highlights, { group = "Identifier", start_pos = pos, end_pos = pos + #authors })
+          pos = pos + #authors + 2
         end
 
-        -- Organization
+        -- (organization) if present
         if ref.organization and ref.organization ~= "" then
-          table.insert(lines, ref.organization)
-          table.insert(lines, "")
+          local org_text = "(" .. ref.organization .. "), "
+          table.insert(parts, org_text)
+          table.insert(highlights, { group = "Comment", start_pos = pos, end_pos = pos + #org_text })
+          pos = pos + #org_text
         end
 
-        -- Publication with event
+        -- publication (event)
         local pub_text = ref.publication or ""
         if ref.eventshort and ref.eventshort ~= "" then
           if pub_text ~= "" then
@@ -560,15 +574,28 @@ function M.pick_reference()
           end
         end
         if pub_text ~= "" then
-          table.insert(lines, pub_text)
-          table.insert(lines, "")
+          table.insert(parts, pub_text)
+          table.insert(highlights, { group = "Include", start_pos = pos, end_pos = pos + #pub_text })
+          pos = pos + #pub_text
         end
 
-        -- Citation preview
-        table.insert(lines, "── Citation ──")
-        table.insert(lines, format_citation(ref))
+        -- Build final text with citation preview
+        local preview_text = table.concat(parts)
+        preview_text = preview_text .. "\n\n" .. format_citation(ref) .. "\n"
 
-        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+        -- Set buffer content
+        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(preview_text, "\n"))
+
+        -- Apply syntax highlighting
+        local bufnr = self.state.bufnr
+        for _, hl in ipairs(highlights) do
+          -- Use version-aware highlighting
+          if vim.fn.has("nvim-0.11") == 1 then
+            vim.hl.range(bufnr, 0, hl.group, { 0, hl.start_pos }, { 0, hl.end_pos }, {})
+          else
+            vim.api.nvim_buf_add_highlight(bufnr, -1, hl.group, 0, hl.start_pos, hl.end_pos)
+          end
+        end
 
         -- Enable text wrapping in preview
         vim.api.nvim_buf_call(self.state.bufnr, function()
