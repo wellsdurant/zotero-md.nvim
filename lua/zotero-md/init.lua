@@ -6,6 +6,7 @@ local default_config = {
   cache_file = vim.fn.expand("~/.local/share/nvim/zotero-md-cache.json"),
   cache_expiration = 3600, -- 1 hour in seconds
   citation_format = "{title} ({year})",
+  preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})",
   preload = true,
   preload_delay = 1000, -- milliseconds
   auto_update = true,
@@ -528,66 +529,86 @@ function M.pick_reference()
       define_preview = function(self, entry)
         local ref = entry.value
 
-        -- Build preview string with position tracking (zotcite approach)
-        local parts = {}
+        -- Build preview using configurable format
+        local format = config.preview_format
+        local preview_text = format
         local highlights = {}
-        local pos = 0
 
-        -- (abbreviation) if present
-        if ref.abbreviation and ref.abbreviation ~= "" then
-          local abbr_text = "(" .. ref.abbreviation .. ") "
-          table.insert(parts, abbr_text)
-          table.insert(highlights, { group = "String", start_pos = pos, end_pos = pos + #abbr_text })
-          pos = pos + #abbr_text
-        end
+        -- Map placeholders to values and highlight groups
+        local field_map = {
+          ["{abbreviation}"] = { value = ref.abbreviation or "", group = "String" },
+          ["{title}"] = { value = ref.title or "", group = "Title" },
+          ["{year}"] = { value = ref.year or "", group = "Number" },
+          ["{authors}"] = { value = ref.authors or "", group = "Identifier" },
+          ["{organization}"] = { value = ref.organization or "", group = "Comment" },
+          ["{publication}"] = { value = ref.publication or "", group = "Include" },
+          ["{eventshort}"] = { value = ref.eventshort or "", group = "Include" },
+          ["{type}"] = { value = ref.type or "", group = "Comment" },
+          ["{url}"] = { value = ref.url or "", group = "Underlined" },
+        }
 
-        -- title,
-        local title = ref.title or "Untitled"
-        table.insert(parts, title .. ", ")
-        table.insert(highlights, { group = "Title", start_pos = pos, end_pos = pos + #title })
-        pos = pos + #title + 2
-
-        -- year,
-        local year = ref.year or ""
-        if year ~= "" then
-          table.insert(parts, year .. ", ")
-          table.insert(highlights, { group = "Number", start_pos = pos, end_pos = pos + #year })
-          pos = pos + #year + 2
-        end
-
-        -- authors,
-        local authors = ref.authors or ""
-        if authors ~= "" then
-          table.insert(parts, authors .. ", ")
-          table.insert(highlights, { group = "Identifier", start_pos = pos, end_pos = pos + #authors })
-          pos = pos + #authors + 2
-        end
-
-        -- (organization) if present
-        if ref.organization and ref.organization ~= "" then
-          local org_text = "(" .. ref.organization .. "), "
-          table.insert(parts, org_text)
-          table.insert(highlights, { group = "Comment", start_pos = pos, end_pos = pos + #org_text })
-          pos = pos + #org_text
-        end
-
-        -- publication (event)
-        local pub_text = ref.publication or ""
-        if ref.eventshort and ref.eventshort ~= "" then
-          if pub_text ~= "" then
-            pub_text = pub_text .. " (" .. ref.eventshort .. ")"
-          else
-            pub_text = ref.eventshort
+        -- Find all placeholder positions in original format
+        local replacements = {}
+        for placeholder, field in pairs(field_map) do
+          local start_idx = 1
+          while true do
+            local s, e = preview_text:find(placeholder, start_idx, true)
+            if not s then
+              break
+            end
+            table.insert(replacements, {
+              start_pos = s,
+              end_pos = e,
+              placeholder = placeholder,
+              value = field.value,
+              group = field.group,
+            })
+            start_idx = e + 1
           end
         end
-        if pub_text ~= "" then
-          table.insert(parts, pub_text)
-          table.insert(highlights, { group = "Include", start_pos = pos, end_pos = pos + #pub_text })
-          pos = pos + #pub_text
+
+        -- Sort by position (process from end to start to maintain positions)
+        table.sort(replacements, function(a, b)
+          return a.start_pos > b.start_pos
+        end)
+
+        -- Replace placeholders from end to start
+        for _, repl in ipairs(replacements) do
+          local before = preview_text:sub(1, repl.start_pos - 1)
+          local after = preview_text:sub(repl.end_pos + 1)
+          preview_text = before .. repl.value .. after
         end
 
-        -- Build final text with citation preview
-        local preview_text = table.concat(parts)
+        -- Now calculate highlight positions in the final text
+        local current_text = format
+        local offset = 0
+        table.sort(replacements, function(a, b)
+          return a.start_pos < b.start_pos
+        end)
+
+        for _, repl in ipairs(replacements) do
+          if repl.value ~= "" then
+            local real_pos = repl.start_pos + offset - 1
+            table.insert(highlights, {
+              group = repl.group,
+              start_pos = real_pos,
+              end_pos = real_pos + #repl.value,
+            })
+          end
+          offset = offset + (#repl.value - #repl.placeholder)
+        end
+
+        -- Clean up empty parentheses, brackets, and extra punctuation
+        preview_text = preview_text
+          :gsub("%(%s*%)", "")
+          :gsub("%[%s*%]", "")
+          :gsub("%{%s*%}", "")
+          :gsub(",%s*,", ",")
+          :gsub("%s*,%s*$", "")
+          :gsub("^%s*,%s*", "")
+          :gsub("%s+", " ")
+
+        -- Add citation preview
         preview_text = preview_text .. "\n\n" .. format_citation(ref) .. "\n"
 
         local bufnr = self.state.bufnr

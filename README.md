@@ -74,6 +74,9 @@ require("zotero-md").setup({
   -- Citation format (supports {title}, {year}, {authors}, {publication}, {type})
   citation_format = "{title} ({year})",
 
+  -- Telescope preview format (customize how references are shown in preview pane)
+  preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})",
+
   -- Preload references on startup
   preload = true,
 
@@ -148,6 +151,23 @@ citation_format = "{eventshort} - {title}"
 ```
 
 **Note:** If the citation format results in an empty string (all placeholders are empty), it will automatically fall back to the default format `"{title} ({year})"`. This ensures you always get a valid citation even when optional fields are missing.
+
+### Preview Format
+
+The `preview_format` option customizes how references are displayed in the Telescope preview pane. It uses the same placeholders as `citation_format`:
+
+```lua
+-- Default: (GPT2) Visual Autoregressive Modeling, 2024, Radford et al., (OpenAI), arXiv (ICML 2019)
+preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})"
+
+-- Minimal: Visual Autoregressive Modeling, 2024, Radford et al.
+preview_format = "{title}, {year}, {authors}"
+
+-- Academic: Radford et al. (2024). Visual Autoregressive Modeling. arXiv
+preview_format = "{authors} ({year}). {title}. {publication}"
+```
+
+Empty placeholders are automatically removed, along with empty parentheses and extra punctuation.
 
 ### Using Zotero Extra Field
 
