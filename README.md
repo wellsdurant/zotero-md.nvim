@@ -147,6 +147,8 @@ citation_format = "{abbreviation}"
 citation_format = "{eventshort} - {title}"
 ```
 
+**Note:** If the citation format results in an empty string (all placeholders are empty), it will automatically fall back to the default format `"{title} ({year})"`. This ensures you always get a valid citation even when optional fields are missing.
+
 ### Using Zotero Extra Field
 
 The plugin automatically parses custom fields from Zotero's **Extra** field. Add fields in the format `Key: Value` (one per line):

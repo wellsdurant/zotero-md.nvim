@@ -387,6 +387,13 @@ local function format_citation(reference)
     :gsub("{organization}", reference.organization or "")
     :gsub("{eventshort}", reference.eventshort or "")
 
+  -- Fallback to default format if citation is empty or only whitespace
+  if citation:match("^%s*$") then
+    local title = reference.title or "Untitled"
+    local year = reference.year or ""
+    citation = year ~= "" and (title .. " (" .. year .. ")") or title
+  end
+
   return string.format("[%s](%s)", citation, reference.zotero_uri)
 end
 
