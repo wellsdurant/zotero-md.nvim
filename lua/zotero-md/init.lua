@@ -583,11 +583,17 @@ function M.pick_reference()
         local preview_text = table.concat(parts)
         preview_text = preview_text .. "\n\n" .. format_citation(ref) .. "\n"
 
+        local bufnr = self.state.bufnr
+
+        -- Enable text wrapping BEFORE setting content
+        vim.api.nvim_set_option_value("wrap", true, { buf = bufnr })
+        vim.api.nvim_set_option_value("linebreak", true, { buf = bufnr })
+        vim.api.nvim_set_option_value("breakindent", true, { buf = bufnr })
+
         -- Set buffer content
-        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(preview_text, "\n"))
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(preview_text, "\n"))
 
         -- Apply syntax highlighting
-        local bufnr = self.state.bufnr
         local ns = vim.api.nvim_create_namespace("zotero_md_preview")
 
         for _, hl in ipairs(highlights) do
@@ -598,12 +604,6 @@ function M.pick_reference()
             vim.api.nvim_buf_add_highlight(bufnr, ns, hl.group, 0, hl.start_pos, hl.end_pos)
           end
         end
-
-        -- Enable text wrapping in preview
-        vim.api.nvim_buf_call(self.state.bufnr, function()
-          vim.opt_local.wrap = true
-          vim.opt_local.linebreak = true
-        end)
       end,
     }),
     attach_mappings = function(prompt_bufnr, map)
