@@ -1,0 +1,122 @@
+*zotero-md.txt*  Insert Zotero references into markdown files
+
+==============================================================================
+CONTENTS                                                  *zotero-md-contents*
+
+    1. Introduction .......................... |zotero-md-introduction|
+    2. Requirements .......................... |zotero-md-requirements|
+    3. Installation .......................... |zotero-md-installation|
+    4. Configuration ......................... |zotero-md-configuration|
+    5. Commands .............................. |zotero-md-commands|
+    6. API ................................... |zotero-md-api|
+    7. License ............................... |zotero-md-license|
+
+==============================================================================
+1. Introduction                                       *zotero-md-introduction*
+
+zotero-md.nvim is a Neovim plugin for browsing and inserting Zotero
+references into markdown files using Telescope.
+
+Features:
+  - Browse and search your Zotero library
+  - Insert formatted citations into markdown
+  - Smart caching for performance
+  - Automatic background updates
+  - Customizable citation format
+  - Markdown-only activation
+
+==============================================================================
+2. Requirements                                       *zotero-md-requirements*
+
+  - Neovim >= 0.8.0
+  - telescope.nvim
+  - plenary.nvim
+  - Zotero with local SQLite database
+  - sqlite3 command-line tool
+
+==============================================================================
+3. Installation                                       *zotero-md-installation*
+
+Using lazy.nvim: >
+    {
+      "wellsdurant/zotero-md.nvim",
+      dependencies = {
+        "nvim-telescope/telescope.nvim",
+        "nvim-lua/plenary.nvim",
+      },
+      config = function()
+        require("zotero-md").setup()
+      end,
+    }
+<
+
+==============================================================================
+4. Configuration                                     *zotero-md-configuration*
+
+Setup with default options: >
+    require("zotero-md").setup({
+      zotero_db_path = vim.fn.expand("~/Zotero/zotero.sqlite"),
+      cache_file = vim.fn.expand("~/.local/share/nvim/zotero-md-cache.json"),
+      cache_expiration = 3600,
+      citation_format = "{title} ({year})",
+      preload = true,
+      preload_delay = 1000,
+      auto_update = true,
+      auto_update_interval = 300,
+      telescope_opts = {
+        prompt_title = "Zotero References",
+        layout_strategy = "horizontal",
+        layout_config = {
+          width = 0.8,
+          height = 0.8,
+          preview_width = 0.6,
+        },
+      },
+      keymaps = {
+        insert_mode = "<C-z>",
+      },
+    })
+<
+
+Options:
+  zotero_db_path        Path to Zotero SQLite database
+  cache_file            Cache file location
+  cache_expiration      Cache validity duration (seconds)
+  citation_format       Format string for citations
+                        Placeholders: {title}, {year}, {authors},
+                                     {publication}, {type}
+  preload               Load references on startup
+  preload_delay         Delay before preloading (milliseconds)
+  auto_update           Auto-update on markdown file open
+  auto_update_interval  Min interval between updates (seconds)
+  telescope_opts        Telescope picker configuration
+  keymaps               Keymap configuration (false to disable)
+
+==============================================================================
+5. Commands                                               *zotero-md-commands*
+
+:ZoteroPick                                                      *:ZoteroPick*
+    Open Telescope picker to select and insert a Zotero reference.
+    Only works in markdown files.
+
+==============================================================================
+6. API                                                         *zotero-md-api*
+
+require("zotero-md").setup({opts})                        *zotero-md.setup()*
+    Initialize the plugin with configuration options.
+
+    Parameters:
+      {opts} (table|nil) Configuration options
+
+require("zotero-md").pick_reference()             *zotero-md.pick_reference()*
+    Open the Telescope picker to select and insert a reference.
+    Only works in markdown files.
+
+==============================================================================
+7. License                                                 *zotero-md-license*
+
+MIT License
+
+Copyright (c) 2024 zotero-md.nvim contributors
+
+vim:tw=78:ts=8:ft=help:norl:
