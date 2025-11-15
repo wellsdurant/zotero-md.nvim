@@ -423,6 +423,7 @@ function M.pick_reference()
   local actions = require("telescope.actions")
   local action_state = require("telescope.actions.state")
   local previewers = require("telescope.previewers")
+  local entry_display = require("telescope.pickers.entry_display")
 
   -- Load references
   local references = load_references()
@@ -431,16 +432,87 @@ function M.pick_reference()
     return
   end
 
-  -- Create picker
-  local opts = vim.tbl_deep_extend("force", config.telescope_opts, {
+  -- Calculate dynamic column widths (zotcite approach)
+  local title_width = 50
+  local year_width = 4
+  local author_width = 15
+  local org_width = 10
+  local pub_width = 15
+
+  for _, ref in ipairs(references) do
+    local author_len = #(ref.authors or "")
+    local org_len = #(ref.organization or "")
+    local pub_len = #(ref.publication or "")
+
+    if author_len > author_width then
+      author_width = author_len
+    end
+    if org_len > org_width then
+      org_width = org_len
+    end
+    if pub_len > pub_width then
+      pub_width = pub_len
+    end
+  end
+
+  -- Cap widths at maximums
+  if author_width > 30 then
+    author_width = 30
+  end
+  if org_width > 20 then
+    org_width = 20
+  end
+  if pub_width > 30 then
+    pub_width = 30
+  end
+
+  -- Create picker with zotcite-style UI
+  local opts = {
+    prompt_title = "Search pattern",
+    results_title = "Zotero references",
     finder = finders.new_table({
       results = references,
       entry_maker = function(entry)
-        local display = string.format("%s (%s) - %s", entry.title, entry.year, entry.authors)
+        local displayer = entry_display.create({
+          separator = " ",
+          items = {
+            { width = title_width },
+            { width = year_width },
+            { width = author_width },
+            { width = org_width },
+            { remaining = true },
+          },
+        })
+
         return {
           value = entry,
-          display = display,
-          ordinal = entry.title .. " " .. entry.authors .. " " .. entry.year,
+          display = function(e)
+            -- Build title with abbreviation prefix
+            local title_text = e.value.title or ""
+            if e.value.abbreviation and e.value.abbreviation ~= "" then
+              title_text = "(" .. e.value.abbreviation .. ") " .. title_text
+            end
+
+            -- Build publication with event if present
+            local pub_text = e.value.publication or ""
+            if e.value.eventshort and e.value.eventshort ~= "" then
+              pub_text = pub_text .. " (" .. e.value.eventshort .. ")"
+            end
+
+            return displayer({
+              { title_text, "Title" },
+              { e.value.year or "", "Number" },
+              { e.value.authors or "", "Identifier" },
+              { e.value.organization or "", "Comment" },
+              { pub_text, "Include" },
+            })
+          end,
+          ordinal = (entry.abbreviation and entry.abbreviation ~= "" and "(" .. entry.abbreviation .. ") " or "")
+            .. (entry.title or "")
+            .. " "
+            .. (entry.authors or "")
+            .. " "
+            .. (entry.year or ""),
         }
       end,
     }),
@@ -448,46 +520,74 @@ function M.pick_reference()
     previewer = previewers.new_buffer_previewer({
       define_preview = function(self, entry)
         local ref = entry.value
-        local lines = {
-          "Title: " .. ref.title,
-          "Authors: " .. ref.authors,
-          "Year: " .. ref.year,
-          "Type: " .. ref.type,
-          "Publication: " .. ref.publication,
-          "URL: " .. ref.url,
-        }
+        local lines = {}
 
-        -- Add extra fields if present
+        -- Abbreviation (if present)
         if ref.abbreviation and ref.abbreviation ~= "" then
-          table.insert(lines, "Abbreviation: " .. ref.abbreviation)
-        end
-        if ref.organization and ref.organization ~= "" then
-          table.insert(lines, "Organization: " .. ref.organization)
-        end
-        if ref.eventshort and ref.eventshort ~= "" then
-          table.insert(lines, "Event: " .. ref.eventshort)
+          table.insert(lines, ref.abbreviation)
+          table.insert(lines, "")
         end
 
+        -- Title
+        table.insert(lines, ref.title or "")
         table.insert(lines, "")
-        table.insert(lines, "Zotero URI: " .. ref.zotero_uri)
-        table.insert(lines, "")
-        table.insert(lines, "Citation preview:")
+
+        -- Year
+        if ref.year and ref.year ~= "" then
+          table.insert(lines, ref.year)
+          table.insert(lines, "")
+        end
+
+        -- Authors
+        if ref.authors and ref.authors ~= "" then
+          table.insert(lines, ref.authors)
+          table.insert(lines, "")
+        end
+
+        -- Organization
+        if ref.organization and ref.organization ~= "" then
+          table.insert(lines, ref.organization)
+          table.insert(lines, "")
+        end
+
+        -- Publication with event
+        local pub_text = ref.publication or ""
+        if ref.eventshort and ref.eventshort ~= "" then
+          if pub_text ~= "" then
+            pub_text = pub_text .. " (" .. ref.eventshort .. ")"
+          else
+            pub_text = ref.eventshort
+          end
+        end
+        if pub_text ~= "" then
+          table.insert(lines, pub_text)
+          table.insert(lines, "")
+        end
+
+        -- Citation preview
+        table.insert(lines, "── Citation ──")
         table.insert(lines, format_citation(ref))
 
         vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+
+        -- Enable text wrapping in preview
+        vim.api.nvim_buf_call(self.state.bufnr, function()
+          vim.opt_local.wrap = true
+          vim.opt_local.linebreak = true
+        end)
       end,
     }),
-    attach_mappings = function(prompt_bufnr)
-      actions.select_default:replace(function()
-        actions.close(prompt_bufnr)
+    attach_mappings = function(prompt_bufnr, map)
+      map({ "i", "n" }, "<CR>", function()
         local selection = action_state.get_selected_entry()
+        actions.close(prompt_bufnr)
         if selection then
           insert_reference(selection.value)
         end
       end)
       return true
     end,
-  })
+  }
 
   pickers.new(opts, {}):find()
 end

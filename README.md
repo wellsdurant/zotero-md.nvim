@@ -4,11 +4,13 @@ A Neovim plugin for inserting Zotero references into markdown files using Telesc
 
 ## Features
 
-- Browse and search your Zotero library directly from Neovim
+- Browse and search your Zotero library with a beautiful columnar UI (inspired by [zotcite](https://github.com/wellsdurant/zotcite))
 - Insert formatted citations into markdown files
 - Smart caching for fast performance
 - Automatic background updates
-- Customizable citation format
+- Customizable citation format with support for Extra field parsing
+- Dynamic column widths that adapt to your library
+- Syntax-highlighted preview pane
 - Only activates in markdown files
 
 ## Requirements
