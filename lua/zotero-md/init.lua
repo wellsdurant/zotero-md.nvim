@@ -148,6 +148,26 @@ local function parse_sqlite_result(result, separator)
   return rows
 end
 
+-- Parse extra field for custom fields (e.g., "Abbreviation: GPT2 (2019)\nOrganization: OpenAI")
+local function parse_extra_field(extra)
+  local fields = {}
+  if not extra or extra == "" then
+    return fields
+  end
+
+  -- Parse line by line
+  for line in extra:gmatch("[^\r\n]+") do
+    -- Match "Key: Value" format
+    local key, value = line:match("^([^:]+):%s*(.+)$")
+    if key and value then
+      -- Store with lowercase key for case-insensitive matching
+      fields[key:lower():gsub("%s+", "")] = value
+    end
+  end
+
+  return fields
+end
+
 -- Load references from Zotero database (using zotcite approach)
 local function load_references_from_db()
   local db_path = config.zotero_db_path
@@ -205,7 +225,8 @@ local function load_references_from_db()
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'title' THEN itemDataValues.value END) as title,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'date' THEN itemDataValues.value END) as date,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'publicationTitle' THEN itemDataValues.value END) as publication,
-      GROUP_CONCAT(CASE WHEN fields.fieldName = 'url' THEN itemDataValues.value END) as url
+      GROUP_CONCAT(CASE WHEN fields.fieldName = 'url' THEN itemDataValues.value END) as url,
+      GROUP_CONCAT(CASE WHEN fields.fieldName = 'extra' THEN itemDataValues.value END) as extra
     FROM items
     LEFT JOIN itemTypes ON items.itemTypeID = itemTypes.itemTypeID
     LEFT JOIN itemData ON items.itemID = itemData.itemID
@@ -240,6 +261,7 @@ local function load_references_from_db()
       local date = row[5] or ""
       local publication = row[6] or ""
       local url = row[7] or ""
+      local extra = row[8] or ""
 
       -- Extract year from date
       local year = date:match("(%d%d%d%d)") or ""
@@ -259,6 +281,9 @@ local function load_references_from_db()
         end
       end
 
+      -- Parse extra field for custom fields
+      local extra_fields = parse_extra_field(extra)
+
       table.insert(references, {
         itemID = item_id,
         itemKey = item_key,
@@ -270,6 +295,10 @@ local function load_references_from_db()
         url = url,
         type = item_type,
         zotero_uri = "zotero://select/library/items/" .. item_key,
+        abbreviation = extra_fields["abbreviation"] or "",
+        organization = extra_fields["organization"] or "",
+        eventshort = extra_fields["eventshort"] or "",
+        extra_fields = extra_fields, -- Store all parsed fields
       })
     end
   end
@@ -354,6 +383,9 @@ local function format_citation(reference)
     :gsub("{authors}", reference.authors or "")
     :gsub("{publication}", reference.publication or "")
     :gsub("{type}", reference.type or "")
+    :gsub("{abbreviation}", reference.abbreviation or "")
+    :gsub("{organization}", reference.organization or "")
+    :gsub("{eventshort}", reference.eventshort or "")
 
   return string.format("[%s](%s)", citation, reference.zotero_uri)
 end
@@ -423,12 +455,25 @@ function M.pick_reference()
           "Type: " .. ref.type,
           "Publication: " .. ref.publication,
           "URL: " .. ref.url,
-          "",
-          "Zotero URI: " .. ref.zotero_uri,
-          "",
-          "Citation preview:",
-          format_citation(ref),
         }
+
+        -- Add extra fields if present
+        if ref.abbreviation and ref.abbreviation ~= "" then
+          table.insert(lines, "Abbreviation: " .. ref.abbreviation)
+        end
+        if ref.organization and ref.organization ~= "" then
+          table.insert(lines, "Organization: " .. ref.organization)
+        end
+        if ref.eventshort and ref.eventshort ~= "" then
+          table.insert(lines, "Event: " .. ref.eventshort)
+        end
+
+        table.insert(lines, "")
+        table.insert(lines, "Zotero URI: " .. ref.zotero_uri)
+        table.insert(lines, "")
+        table.insert(lines, "Citation preview:")
+        table.insert(lines, format_citation(ref))
+
         vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
       end,
     }),

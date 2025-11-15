@@ -122,6 +122,9 @@ The `citation_format` option controls how references are displayed in the picker
 - `{authors}` - Formatted author names
 - `{publication}` - Publication/journal name
 - `{type}` - Item type (article, book, etc.)
+- `{abbreviation}` - From Zotero's Extra field (e.g., `Abbreviation: GPT2 (2019)`)
+- `{organization}` - From Zotero's Extra field (e.g., `Organization: OpenAI`)
+- `{eventshort}` - From Zotero's Extra field (e.g., `EventShort: ICML 2019`)
 
 Example formats:
 
@@ -134,7 +137,25 @@ citation_format = "{authors} - {title} ({year})"
 
 -- Academic style: Smith et al. (2024). Visual Autoregressive Modeling
 citation_format = "{authors} ({year}). {title}"
+
+-- With abbreviation: GPT2 (2019)
+citation_format = "{abbreviation}"
+
+-- With event: ICML 2019 - Visual Autoregressive Modeling
+citation_format = "{eventshort} - {title}"
 ```
+
+### Using Zotero Extra Field
+
+The plugin automatically parses custom fields from Zotero's **Extra** field. Add fields in the format `Key: Value` (one per line):
+
+```
+Abbreviation: GPT2 (2019)
+Organization: OpenAI
+EventShort: ICML 2019
+```
+
+These fields will be available as placeholders in your citation format and displayed in the Telescope preview.
 
 All citations are inserted as markdown links to the Zotero item:
 
