@@ -588,12 +588,14 @@ function M.pick_reference()
 
         -- Apply syntax highlighting
         local bufnr = self.state.bufnr
+        local ns = vim.api.nvim_create_namespace("zotero_md_preview")
+
         for _, hl in ipairs(highlights) do
           -- Use version-aware highlighting
           if vim.fn.has("nvim-0.11") == 1 then
-            vim.hl.range(bufnr, 0, hl.group, { 0, hl.start_pos }, { 0, hl.end_pos }, {})
+            vim.hl.range(bufnr, ns, hl.group, { 0, hl.start_pos }, { 0, hl.end_pos }, {})
           else
-            vim.api.nvim_buf_add_highlight(bufnr, -1, hl.group, 0, hl.start_pos, hl.end_pos)
+            vim.api.nvim_buf_add_highlight(bufnr, ns, hl.group, 0, hl.start_pos, hl.end_pos)
           end
         end
 
