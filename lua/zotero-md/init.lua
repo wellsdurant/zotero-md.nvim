@@ -531,82 +531,61 @@ function M.pick_reference()
 
         -- Build preview using configurable format
         local format = config.preview_format
-        local preview_text = format
         local highlights = {}
+        local pos = 0
+        local parts = {}
 
-        -- Map placeholders to values and highlight groups
-        local field_map = {
-          ["{abbreviation}"] = { value = ref.abbreviation or "", group = "String" },
-          ["{title}"] = { value = ref.title or "", group = "Title" },
-          ["{year}"] = { value = ref.year or "", group = "Number" },
-          ["{authors}"] = { value = ref.authors or "", group = "Identifier" },
-          ["{organization}"] = { value = ref.organization or "", group = "Comment" },
-          ["{publication}"] = { value = ref.publication or "", group = "Include" },
-          ["{eventshort}"] = { value = ref.eventshort or "", group = "Include" },
-          ["{type}"] = { value = ref.type or "", group = "Comment" },
-          ["{url}"] = { value = ref.url or "", group = "Underlined" },
-        }
+        -- Process format character by character, tracking positions
+        local i = 1
+        while i <= #format do
+          local found_placeholder = false
 
-        -- Find all placeholder positions in original format
-        local replacements = {}
-        for placeholder, field in pairs(field_map) do
-          local start_idx = 1
-          while true do
-            local s, e = preview_text:find(placeholder, start_idx, true)
-            if not s then
+          -- Check for placeholders
+          local placeholders = {
+            { pattern = "{abbreviation}", value = ref.abbreviation or "", group = "String" },
+            { pattern = "{title}", value = ref.title or "", group = "Title" },
+            { pattern = "{year}", value = ref.year or "", group = "Number" },
+            { pattern = "{authors}", value = ref.authors or "", group = "Identifier" },
+            { pattern = "{organization}", value = ref.organization or "", group = "Comment" },
+            { pattern = "{publication}", value = ref.publication or "", group = "Include" },
+            { pattern = "{eventshort}", value = ref.eventshort or "", group = "Include" },
+            { pattern = "{type}", value = ref.type or "", group = "Comment" },
+            { pattern = "{url}", value = ref.url or "", group = "Underlined" },
+          }
+
+          for _, ph in ipairs(placeholders) do
+            if format:sub(i, i + #ph.pattern - 1) == ph.pattern then
+              if ph.value ~= "" then
+                table.insert(parts, ph.value)
+                table.insert(highlights, {
+                  group = ph.group,
+                  start_pos = pos,
+                  end_pos = pos + #ph.value,
+                })
+                pos = pos + #ph.value
+              end
+              i = i + #ph.pattern
+              found_placeholder = true
               break
             end
-            table.insert(replacements, {
-              start_pos = s,
-              end_pos = e,
-              placeholder = placeholder,
-              value = field.value,
-              group = field.group,
-            })
-            start_idx = e + 1
+          end
+
+          -- If no placeholder found, copy the character
+          if not found_placeholder then
+            local char = format:sub(i, i)
+            table.insert(parts, char)
+            pos = pos + #char
+            i = i + 1
           end
         end
 
-        -- Sort by position (process from end to start to maintain positions)
-        table.sort(replacements, function(a, b)
-          return a.start_pos > b.start_pos
-        end)
+        -- Build final text (minimal cleanup to preserve highlight positions)
+        local preview_text = table.concat(parts)
+          :gsub("%s+", " ")  -- Collapse multiple spaces
+          :gsub("^%s+", "")  -- Trim leading space
 
-        -- Replace placeholders from end to start
-        for _, repl in ipairs(replacements) do
-          local before = preview_text:sub(1, repl.start_pos - 1)
-          local after = preview_text:sub(repl.end_pos + 1)
-          preview_text = before .. repl.value .. after
-        end
-
-        -- Now calculate highlight positions in the final text
-        local current_text = format
-        local offset = 0
-        table.sort(replacements, function(a, b)
-          return a.start_pos < b.start_pos
-        end)
-
-        for _, repl in ipairs(replacements) do
-          if repl.value ~= "" then
-            local real_pos = repl.start_pos + offset - 1
-            table.insert(highlights, {
-              group = repl.group,
-              start_pos = real_pos,
-              end_pos = real_pos + #repl.value,
-            })
-          end
-          offset = offset + (#repl.value - #repl.placeholder)
-        end
-
-        -- Clean up empty parentheses, brackets, and extra punctuation
-        preview_text = preview_text
-          :gsub("%(%s*%)", "")
-          :gsub("%[%s*%]", "")
-          :gsub("%{%s*%}", "")
-          :gsub(",%s*,", ",")
-          :gsub("%s*,%s*$", "")
-          :gsub("^%s*,%s*", "")
-          :gsub("%s+", " ")
+        -- Note: We don't remove empty parentheses/brackets to preserve highlight positions
+        -- Users should design their preview_format to avoid this issue
 
         -- Add citation preview
         preview_text = preview_text .. "\n\n" .. format_citation(ref) .. "\n"
