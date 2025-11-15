@@ -148,7 +148,7 @@ local function parse_sqlite_result(result, separator)
   return rows
 end
 
--- Load references from Zotero database
+-- Load references from Zotero database (using zotcite approach)
 local function load_references_from_db()
   local db_path = config.zotero_db_path
 
@@ -158,7 +158,45 @@ local function load_references_from_db()
     return nil
   end
 
-  -- Query for main item data
+  -- Query 1: Get ALL authors at once (zotcite approach)
+  local authors_query = [[
+    SELECT items.itemID, creators.lastName, creators.firstName
+    FROM items, itemCreators, creators
+    WHERE items.itemID = itemCreators.itemID
+      AND itemCreators.creatorID = creators.creatorID
+      AND items.itemID NOT IN (SELECT itemID FROM deletedItems)
+    ORDER BY items.itemID, itemCreators.orderIndex
+  ]]
+
+  local authors_result, err = execute_sqlite_query(db_path, authors_query)
+  if not authors_result then
+    vim.notify("Failed to query authors: " .. (err or "unknown error"), vim.log.levels.WARN)
+  end
+
+  -- Build a map of itemID -> authors
+  local authors_map = {}
+  if authors_result then
+    local authors_rows = parse_sqlite_result(authors_result)
+    for _, row in ipairs(authors_rows) do
+      if #row >= 2 then
+        local item_id = row[1]
+        local last_name = row[2] or ""
+        local first_name = row[3] or ""
+
+        if last_name ~= "" then
+          if not authors_map[item_id] then
+            authors_map[item_id] = {}
+          end
+          -- Only keep first 3 authors
+          if #authors_map[item_id] < 3 then
+            table.insert(authors_map[item_id], { lastName = last_name, firstName = first_name })
+          end
+        end
+      end
+    end
+  end
+
+  -- Query 2: Get all item data (simplified from zotcite approach)
   local query = [[
     SELECT
       items.itemID,
@@ -206,32 +244,8 @@ local function load_references_from_db()
       -- Extract year from date
       local year = date:match("(%d%d%d%d)") or ""
 
-      -- Query for authors
-      local authors_query = string.format(
-        [[
-          SELECT creators.lastName, creators.firstName
-          FROM itemCreators
-          LEFT JOIN creators ON itemCreators.creatorID = creators.creatorID
-          WHERE itemCreators.itemID = %s
-          ORDER BY itemCreators.orderIndex
-          LIMIT 3
-        ]],
-        item_id
-      )
-
-      local authors_result = execute_sqlite_query(db_path, authors_query)
-      local authors_rows = parse_sqlite_result(authors_result)
-      local authors = {}
-
-      for _, author_row in ipairs(authors_rows) do
-        if #author_row >= 1 then
-          local last_name = author_row[1] or ""
-          local first_name = author_row[2] or ""
-          if last_name ~= "" then
-            table.insert(authors, { lastName = last_name, firstName = first_name })
-          end
-        end
-      end
+      -- Get authors from pre-built map (no additional query!)
+      local authors = authors_map[item_id] or {}
 
       -- Format authors string
       local authors_str = ""
