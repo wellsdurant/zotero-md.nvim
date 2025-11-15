@@ -154,7 +154,9 @@ citation_format = "{eventshort} - {title}"
 
 ### Preview Format
 
-The `preview_format` option customizes how references are displayed in the Telescope preview pane. It uses the same placeholders as `citation_format`:
+The `preview_format` option customizes how references are displayed in the Telescope preview pane. It uses the same placeholders as `citation_format`.
+
+**The preview shows ONLY what you specify** - no additional fields are automatically added.
 
 ```lua
 -- Default: (GPT2) Visual Autoregressive Modeling, 2024, Radford et al., (OpenAI), arXiv (ICML 2019)
@@ -167,7 +169,7 @@ preview_format = "{title}, {year}, {authors}"
 preview_format = "{authors} ({year}). {title}. {publication}"
 ```
 
-Empty placeholders are automatically removed, along with empty parentheses and extra punctuation.
+**Tip:** Design your format to avoid empty parentheses. Use `"{abbreviation} {title}"` instead of `"({abbreviation}) {title}"` if the field might be empty.
 
 ### Using Zotero Extra Field
 

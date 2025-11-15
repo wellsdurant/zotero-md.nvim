@@ -587,14 +587,18 @@ function M.pick_reference()
         -- Note: We don't remove empty parentheses/brackets to preserve highlight positions
         -- Users should design their preview_format to avoid this issue
 
-        -- Add citation preview
-        preview_text = preview_text .. "\n\n" .. format_citation(ref) .. "\n"
-
         local bufnr = self.state.bufnr
         local winid = self.state.winid
 
-        -- Set buffer content
-        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(preview_text, "\n"))
+        -- Set buffer content (just show the formatted preview)
+        local lines = {}
+        for line in preview_text:gmatch("[^\n]+") do
+          table.insert(lines, line)
+        end
+        if #lines == 0 then
+          lines = { preview_text }
+        end
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
 
         -- Enable text wrapping (window-local options)
         if winid and vim.api.nvim_win_is_valid(winid) then
