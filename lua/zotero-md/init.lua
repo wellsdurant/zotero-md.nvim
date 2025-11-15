@@ -584,14 +584,17 @@ function M.pick_reference()
         preview_text = preview_text .. "\n\n" .. format_citation(ref) .. "\n"
 
         local bufnr = self.state.bufnr
-
-        -- Enable text wrapping BEFORE setting content
-        vim.api.nvim_set_option_value("wrap", true, { buf = bufnr })
-        vim.api.nvim_set_option_value("linebreak", true, { buf = bufnr })
-        vim.api.nvim_set_option_value("breakindent", true, { buf = bufnr })
+        local winid = self.state.winid
 
         -- Set buffer content
         vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, vim.split(preview_text, "\n"))
+
+        -- Enable text wrapping (window-local options)
+        if winid and vim.api.nvim_win_is_valid(winid) then
+          vim.api.nvim_set_option_value("wrap", true, { win = winid })
+          vim.api.nvim_set_option_value("linebreak", true, { win = winid })
+          vim.api.nvim_set_option_value("breakindent", true, { win = winid })
+        end
 
         -- Apply syntax highlighting
         local ns = vim.api.nvim_create_namespace("zotero_md_preview")
