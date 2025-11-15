@@ -80,15 +80,22 @@ end
 
 -- Execute SQLite query
 local function execute_sqlite_query(db_path, query)
-  local handle = io.popen(string.format('sqlite3 "%s" "%s"', db_path, query))
+  -- Use -readonly flag to avoid database locks when Zotero is running
+  local cmd = string.format('sqlite3 -readonly "%s" "%s" 2>&1', db_path, query)
+  local handle = io.popen(cmd)
   if not handle then
-    return nil
+    return nil, "Failed to execute query"
   end
 
   local result = handle:read("*all")
-  handle:close()
+  local success = handle:close()
 
-  return result
+  -- Check for errors in output
+  if result and result:match("Error:") then
+    return nil, result
+  end
+
+  return result, nil
 end
 
 -- Parse SQLite result (simple CSV-like parser)
@@ -138,14 +145,19 @@ local function load_references_from_db()
     LIMIT 1000
   ]]
 
-  local result = execute_sqlite_query(db_path, query)
+  local result, err = execute_sqlite_query(db_path, query)
   if not result then
-    vim.notify("Failed to query Zotero database", vim.log.levels.ERROR)
+    vim.notify("Failed to query Zotero database: " .. (err or "unknown error"), vim.log.levels.ERROR)
     return nil
   end
 
   local rows = parse_sqlite_result(result)
   local references = {}
+
+  if #rows == 0 then
+    vim.notify("No items found in Zotero database. Make sure Zotero has references.", vim.log.levels.WARN)
+    return {}
+  end
 
   for _, row in ipairs(rows) do
     if #row >= 3 then
@@ -409,10 +421,67 @@ local function setup_auto_update()
   })
 end
 
+-- Debug function to test database connection
+function M.debug_db()
+  local db_path = config.zotero_db_path or default_config.zotero_db_path
+
+  print("Zotero Database Path: " .. db_path)
+  print("Database exists: " .. tostring(vim.fn.filereadable(db_path) == 1))
+
+  if vim.fn.filereadable(db_path) ~= 1 then
+    print("ERROR: Database file not found!")
+    return
+  end
+
+  -- Test simple query
+  local test_query = "SELECT COUNT(*) FROM items WHERE itemID NOT IN (SELECT itemID FROM deletedItems);"
+  local result, err = execute_sqlite_query(db_path, test_query)
+
+  if err then
+    print("ERROR: " .. err)
+    return
+  end
+
+  print("Total items in database: " .. (result or "unknown"))
+  print("\nTrying to load references...")
+
+  local refs = load_references_from_db()
+  if refs then
+    print("Successfully loaded " .. #refs .. " references")
+    if #refs > 0 then
+      print("\nFirst reference:")
+      local r = refs[1]
+      print("  Title: " .. r.title)
+      print("  Authors: " .. r.authors)
+      print("  Year: " .. r.year)
+    end
+  else
+    print("Failed to load references")
+  end
+end
+
+-- Setup keymaps
+local function setup_keymaps()
+  if not config.keymaps or config.keymaps == false then
+    return
+  end
+
+  if config.keymaps.insert_mode then
+    vim.keymap.set("i", config.keymaps.insert_mode, function()
+      if is_markdown_file() then
+        M.pick_reference()
+      end
+    end, { desc = "Pick Zotero reference" })
+  end
+end
+
 -- Setup function
 function M.setup(user_config)
   -- Merge user config with defaults
   config = vim.tbl_deep_extend("force", default_config, user_config or {})
+
+  -- Setup keymaps
+  setup_keymaps()
 
   -- Preload references
   if config.preload then

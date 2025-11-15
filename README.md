@@ -107,6 +107,7 @@ require("zotero-md").setup({
 ### Commands
 
 - `:ZoteroPick` - Open Telescope picker to select and insert a Zotero reference
+- `:ZoteroDebug` - Debug database connection and show diagnostic information
 
 ### Keymaps
 
@@ -162,8 +163,27 @@ If you're using a custom Zotero data directory, you can find it in Zotero:
 1. **Initial Load**: On startup (with `preload = true`), the plugin reads your Zotero database and caches references
 2. **Caching**: References are cached to `~/.local/share/nvim/zotero-md-cache.json` for fast access
 3. **Auto-Update**: When opening markdown files, the cache automatically refreshes (max once per 5 minutes)
-4. **Smart Queries**: The plugin queries the Zotero SQLite database for items, authors, and metadata
+4. **Smart Queries**: The plugin queries the Zotero SQLite database in read-only mode (safe to use while Zotero is running)
 5. **Markdown-Only**: The picker only activates in markdown files to prevent accidental insertions
+
+## Troubleshooting
+
+### "Database is locked" error
+
+This has been fixed in the latest version. The plugin now uses `-readonly` mode to query the database, which works even when Zotero is running.
+
+### "No Zotero references found"
+
+Run `:ZoteroDebug` to diagnose the issue. This will show:
+- Database path and whether it exists
+- Total number of items in the database
+- Whether references can be loaded successfully
+- A sample reference if available
+
+Common causes:
+- Incorrect database path (check your Zotero data directory location)
+- Empty Zotero library
+- Database permissions issue
 
 ## License
 
