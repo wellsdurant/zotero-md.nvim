@@ -84,7 +84,9 @@ Options:
   cache_expiration      Cache validity duration (seconds)
   citation_format       Format string for citations
                         Placeholders: {title}, {year}, {authors},
-                                     {publication}, {type}
+                                     {publication}, {type}, {abstract},
+                                     {abbreviation}, {organization},
+                                     {eventshort}
   preload               Load references on startup
   preload_delay         Delay before preloading (milliseconds)
   auto_update           Auto-update on markdown file open

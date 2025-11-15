@@ -6,7 +6,7 @@ local default_config = {
   cache_file = vim.fn.expand("~/.local/share/nvim/zotero-md-cache.json"),
   cache_expiration = 3600, -- 1 hour in seconds
   citation_format = "{title} ({year})",
-  preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})",
+  preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})\n\n{abstract}",
   preload = true,
   preload_delay = 1000, -- milliseconds
   auto_update = true,
@@ -227,7 +227,8 @@ local function load_references_from_db()
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'date' THEN itemDataValues.value END) as date,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'publicationTitle' THEN itemDataValues.value END) as publication,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'url' THEN itemDataValues.value END) as url,
-      GROUP_CONCAT(CASE WHEN fields.fieldName = 'extra' THEN itemDataValues.value END) as extra
+      GROUP_CONCAT(CASE WHEN fields.fieldName = 'extra' THEN itemDataValues.value END) as extra,
+      GROUP_CONCAT(CASE WHEN fields.fieldName = 'abstractNote' THEN itemDataValues.value END) as abstract
     FROM items
     LEFT JOIN itemTypes ON items.itemTypeID = itemTypes.itemTypeID
     LEFT JOIN itemData ON items.itemID = itemData.itemID
@@ -263,6 +264,7 @@ local function load_references_from_db()
       local publication = row[6] or ""
       local url = row[7] or ""
       local extra = row[8] or ""
+      local abstract = row[9] or ""
 
       -- Extract year from date
       local year = date:match("(%d%d%d%d)") or ""
@@ -299,6 +301,7 @@ local function load_references_from_db()
         abbreviation = extra_fields["abbreviation"] or "",
         organization = extra_fields["organization"] or "",
         eventshort = extra_fields["eventshort"] or "",
+        abstract = abstract,
         extra_fields = extra_fields, -- Store all parsed fields
       })
     end
@@ -387,6 +390,7 @@ local function format_citation(reference)
     :gsub("{abbreviation}", reference.abbreviation or "")
     :gsub("{organization}", reference.organization or "")
     :gsub("{eventshort}", reference.eventshort or "")
+    :gsub("{abstract}", reference.abstract or "")
 
   -- Fallback to default format if citation is empty or only whitespace
   if citation:match("^%s*$") then
@@ -551,6 +555,7 @@ function M.pick_reference()
             { pattern = "{eventshort}", value = ref.eventshort or "", group = "Include" },
             { pattern = "{type}", value = ref.type or "", group = "Comment" },
             { pattern = "{url}", value = ref.url or "", group = "Underlined" },
+            { pattern = "{abstract}", value = ref.abstract or "", group = "Comment" },
           }
 
           for _, ph in ipairs(placeholders) do

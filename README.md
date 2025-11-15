@@ -75,7 +75,7 @@ require("zotero-md").setup({
   citation_format = "{title} ({year})",
 
   -- Telescope preview format (customize how references are shown in preview pane)
-  preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})",
+  preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})\n\n{abstract}",
 
   -- Preload references on startup
   preload = true,
@@ -130,6 +130,7 @@ The `citation_format` option controls how references are displayed in the picker
 - `{abbreviation}` - From Zotero's Extra field (e.g., `Abbreviation: GPT2 (2019)`)
 - `{organization}` - From Zotero's Extra field (e.g., `Organization: OpenAI`)
 - `{eventshort}` - From Zotero's Extra field (e.g., `EventShort: ICML 2019`)
+- `{abstract}` - Abstract/summary of the reference
 
 Example formats:
 
@@ -160,7 +161,8 @@ The `preview_format` option customizes how references are displayed in the Teles
 
 ```lua
 -- Default: (GPT2) Visual Autoregressive Modeling, 2024, Radford et al., (OpenAI), arXiv (ICML 2019)
-preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})"
+--          [followed by abstract on new lines]
+preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})\n\n{abstract}"
 
 -- Minimal: Visual Autoregressive Modeling, 2024, Radford et al.
 preview_format = "{title}, {year}, {authors}"
