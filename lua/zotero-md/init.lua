@@ -435,6 +435,7 @@ local function format_citation(reference)
     :gsub("{organization}", reference.organization or "")
     :gsub("{eventshort}", reference.eventshort or "")
     :gsub("{abstract}", reference.abstract or "")
+    :gsub("{key}", reference.itemKey or "")
 
   -- Fallback to default format if citation is empty or only whitespace
   if citation:match("^%s*$") then
@@ -592,6 +593,7 @@ function M.pick_reference()
           { pattern = "{type}", value = ref.type or "", group = "Comment", marker = "\x01TYP\x01" },
           { pattern = "{url}", value = ref.url or "", group = "Underlined", marker = "\x01URL\x01" },
           { pattern = "{abstract}", value = ref.abstract or "", group = "Comment", marker = "\x01ABS\x01" },
+          { pattern = "{key}", value = ref.itemKey or "", group = "Constant", marker = "\x01KEY\x01" },
         }
 
         -- First pass: replace placeholders with unique markers (or remove if empty)

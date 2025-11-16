@@ -131,6 +131,7 @@ The `citation_format` option controls how references are displayed in the picker
 - `{organization}` - From Zotero's Extra field (e.g., `Organization: OpenAI`)
 - `{eventshort}` - From Zotero's Extra field (e.g., `EventShort: ICML 2019`)
 - `{abstract}` - Abstract/summary of the reference
+- `{key}` - Zotero item key (useful for debugging)
 
 Example formats:
 
