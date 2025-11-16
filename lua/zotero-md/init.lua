@@ -298,7 +298,11 @@ local function load_references_from_db()
       local item_key = row[2]
       local item_type = row[3]
       local date_modified = row[4] or ""
-      local title = row[5] or "Untitled"
+      local title = row[5]
+      -- Handle both nil and empty string
+      if not title or title == "" then
+        title = "Untitled"
+      end
       local date = row[6] or ""
       local publication = row[7] or ""
       local url = row[8] or ""
@@ -732,12 +736,23 @@ function M.debug_db()
   local refs = load_references_from_db()
   if refs then
     print("Successfully loaded " .. #refs .. " references")
+
+    -- Count untitled entries
+    local untitled_count = 0
+    for _, r in ipairs(refs) do
+      if r.title == "Untitled" then
+        untitled_count = untitled_count + 1
+      end
+    end
+    print("Untitled entries: " .. untitled_count)
+
     if #refs > 0 then
-      print("\nFirst reference:")
-      local r = refs[1]
-      print("  Title: " .. r.title)
-      print("  Authors: " .. r.authors)
-      print("  Year: " .. r.year)
+      print("\nFirst 5 references:")
+      for i = 1, math.min(5, #refs) do
+        local r = refs[i]
+        print(string.format("%d. Title: %s | Authors: %s | Year: %s | Type: %s",
+          i, r.title, r.authors, r.year, r.type))
+      end
     end
   else
     print("Failed to load references")
