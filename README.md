@@ -4,7 +4,7 @@ A Neovim plugin for inserting Zotero references into markdown files using Telesc
 
 ## Features
 
-- Browse and search your Zotero library with a beautiful columnar UI (inspired by [zotcite](https://github.com/wellsdurant/zotcite))
+- Browse and search your Zotero library with a beautiful columnar UI (inspired by [zotcite](https://github.com/jalvesaq/zotcite))
 - Insert formatted citations into markdown files
 - Smart caching for fast performance
 - Automatic background updates
@@ -273,7 +273,7 @@ User Action → init.lua → load_references()
 
 ### "Database is locked" error
 
-This has been fixed. The plugin creates a temporary copy of the Zotero database in Neovim's cache directory before querying it. This approach (borrowed from [zotcite](https://github.com/wellsdurant/zotcite)) completely avoids lock conflicts and works safely even when Zotero is running.
+This has been fixed. The plugin creates a temporary copy of the Zotero database in Neovim's cache directory before querying it. This approach (borrowed from [zotcite](https://github.com/jalvesaq/zotcite)) completely avoids lock conflicts and works safely even when Zotero is running.
 
 The temporary copy is stored at `~/.local/share/nvim/zotero-md-temp.sqlite` (or your platform's cache directory) and is only updated when the original database changes.
 
@@ -296,4 +296,4 @@ MIT
 
 ## Credits
 
-Inspired by [raindrop-md.nvim](https://github.com/wellsdurant/raindrop-md.nvim) and based on the Zotero database reading logic from [zotcite](https://github.com/wellsdurant/zotcite).
+Inspired by [zotcite](https://github.com/jalvesaq/zotcite). The database reading logic, two-query optimization strategy, and UI design are adapted from zotcite's approach to efficiently loading Zotero references.
