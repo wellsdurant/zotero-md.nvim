@@ -180,13 +180,35 @@ local function load_references_from_db()
   end
 
   -- Query 1: Get ALL authors at once (zotcite approach)
+  -- Prioritize creator types: author, artist, performer, director, etc.
   local authors_query = [[
-    SELECT items.itemID, creators.lastName, creators.firstName
-    FROM items, itemCreators, creators
+    SELECT items.itemID, creators.lastName, creators.firstName, creatorTypes.creatorType,
+      CASE creatorTypes.creatorType
+        WHEN 'author' THEN 1
+        WHEN 'artist' THEN 2
+        WHEN 'performer' THEN 3
+        WHEN 'director' THEN 4
+        WHEN 'composer' THEN 5
+        WHEN 'sponsor' THEN 6
+        WHEN 'contributor' THEN 7
+        WHEN 'interviewee' THEN 8
+        WHEN 'cartographer' THEN 9
+        WHEN 'inventor' THEN 10
+        WHEN 'podcaster' THEN 11
+        WHEN 'presenter' THEN 12
+        WHEN 'programmer' THEN 13
+        WHEN 'recipient' THEN 14
+        WHEN 'editor' THEN 15
+        WHEN 'seriesEditor' THEN 16
+        WHEN 'translator' THEN 17
+        ELSE 99
+      END as priority
+    FROM items, itemCreators, creators, creatorTypes
     WHERE items.itemID = itemCreators.itemID
       AND itemCreators.creatorID = creators.creatorID
+      AND itemCreators.creatorTypeID = creatorTypes.creatorTypeID
       AND items.itemID NOT IN (SELECT itemID FROM deletedItems)
-    ORDER BY items.itemID, itemCreators.orderIndex
+    ORDER BY items.itemID, priority, itemCreators.orderIndex
   ]]
 
   local authors_result, err = execute_sqlite_query(db_path, authors_query)
@@ -203,12 +225,13 @@ local function load_references_from_db()
         local item_id = row[1]
         local last_name = row[2] or ""
         local first_name = row[3] or ""
+        -- row[4] = creatorType, row[5] = priority (not needed in processing)
 
         if last_name ~= "" then
           if not authors_map[item_id] then
             authors_map[item_id] = {}
           end
-          -- Only keep first 3 authors
+          -- Only keep first 3 authors (already sorted by priority)
           if #authors_map[item_id] < 3 then
             table.insert(authors_map[item_id], { lastName = last_name, firstName = first_name })
           end
