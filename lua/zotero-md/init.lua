@@ -272,7 +272,7 @@ local function load_references_from_db()
     LEFT JOIN fields ON itemData.fieldID = fields.fieldID
     LEFT JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
     WHERE items.itemID NOT IN (SELECT itemID FROM deletedItems)
-      AND itemTypes.typeName NOT IN ('attachment', 'note')
+      AND itemTypes.typeName NOT IN ('attachment', 'note', 'annotation')
     GROUP BY items.itemID
     ORDER BY items.dateModified DESC
     LIMIT 1000
