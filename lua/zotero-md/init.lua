@@ -623,13 +623,17 @@ function M.pick_reference()
           end
         end
 
-        -- Build final text (minimal cleanup to preserve highlight positions)
+        -- Build final text with cleanup
         local preview_text = table.concat(parts)
           :gsub("%s+", " ")  -- Collapse multiple spaces
           :gsub("^%s+", "")  -- Trim leading space
-
-        -- Note: We don't remove empty parentheses/brackets to preserve highlight positions
-        -- Users should design their preview_format to avoid this issue
+          :gsub("%s*%(%s*%)", "")  -- Remove empty parentheses with optional spaces
+          :gsub("%s*%[%s*%]", "")  -- Remove empty brackets with optional spaces
+          :gsub("%s*{%s*}", "")  -- Remove empty braces with optional spaces
+          :gsub(",%s*,", ",")  -- Remove double commas
+          :gsub("^%s*,", "")  -- Remove leading comma
+          :gsub(",%s*$", "")  -- Remove trailing comma
+          :gsub("%s+", " ")  -- Collapse spaces again after cleanup
 
         local bufnr = self.state.bufnr
         local winid = self.state.winid

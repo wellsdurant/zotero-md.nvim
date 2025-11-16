@@ -173,7 +173,7 @@ preview_format = "{authors} ({year}). {title}. {publication}"
 preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})"
 ```
 
-**Tip:** Design your format to avoid empty parentheses. Use `"{abbreviation} {title}"` instead of `"({abbreviation}) {title}"` if the field might be empty.
+**Note:** Empty parentheses, brackets, and extra commas are automatically cleaned up if placeholders are empty.
 
 ### Using Zotero Extra Field
 
