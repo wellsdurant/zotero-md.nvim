@@ -116,8 +116,8 @@ local function execute_sqlite_query(db_path, query)
     return nil, err or "Failed to access database"
   end
 
-  -- Use tab as separator to avoid issues with pipe characters in data
-  local cmd = string.format('sqlite3 -separator "\t" "%s" "%s" 2>&1', actual_db_path, query)
+  -- Use ASCII record separator (0x1E) and field separator (0x1F) to avoid conflicts with data
+  local cmd = string.format('sqlite3 -cmd ".separator \x1F \x1E" "%s" "%s" 2>&1', actual_db_path, query)
   local handle = io.popen(cmd)
   if not handle then
     return nil, "Failed to execute query"
@@ -134,23 +134,29 @@ local function execute_sqlite_query(db_path, query)
   return result, nil
 end
 
--- Parse SQLite result (tab-separated parser)
-local function parse_sqlite_result(result, separator)
-  separator = separator or "\t"
+-- Parse SQLite result using ASCII separators
+local function parse_sqlite_result(result, field_sep, record_sep)
+  field_sep = field_sep or "\x1F"  -- ASCII Unit Separator
+  record_sep = record_sep or "\x1E"  -- ASCII Record Separator
+
   local rows = {}
-  for line in result:gmatch("[^\r\n]+") do
+  -- Split by record separator
+  for record in result:gmatch("[^" .. record_sep .. "]+") do
     local row = {}
-    -- Split by separator
+    -- Split by field separator
     local start_pos = 1
     while true do
-      local sep_pos = line:find(separator, start_pos, true)
+      local sep_pos = record:find(field_sep, start_pos, true)
       if not sep_pos then
         -- Last field
-        table.insert(row, line:sub(start_pos))
+        local field_value = record:sub(start_pos)
+        -- Trim trailing newline if present
+        field_value = field_value:gsub("\n$", "")
+        table.insert(row, field_value)
         break
       end
-      table.insert(row, line:sub(start_pos, sep_pos - 1))
-      start_pos = sep_pos + #separator
+      table.insert(row, record:sub(start_pos, sep_pos - 1))
+      start_pos = sep_pos + #field_sep
     end
     if #row > 0 then
       table.insert(rows, row)
