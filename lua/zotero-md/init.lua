@@ -116,7 +116,8 @@ local function execute_sqlite_query(db_path, query)
     return nil, err or "Failed to access database"
   end
 
-  local cmd = string.format('sqlite3 "%s" "%s" 2>&1', actual_db_path, query)
+  -- Use tab as separator to avoid issues with pipe characters in data
+  local cmd = string.format('sqlite3 -separator "\t" "%s" "%s" 2>&1', actual_db_path, query)
   local handle = io.popen(cmd)
   if not handle then
     return nil, "Failed to execute query"
@@ -133,14 +134,23 @@ local function execute_sqlite_query(db_path, query)
   return result, nil
 end
 
--- Parse SQLite result (simple CSV-like parser)
+-- Parse SQLite result (tab-separated parser)
 local function parse_sqlite_result(result, separator)
-  separator = separator or "|"
+  separator = separator or "\t"
   local rows = {}
   for line in result:gmatch("[^\r\n]+") do
     local row = {}
-    for value in line:gmatch("[^" .. separator .. "]+") do
-      table.insert(row, value)
+    -- Split by separator
+    local start_pos = 1
+    while true do
+      local sep_pos = line:find(separator, start_pos, true)
+      if not sep_pos then
+        -- Last field
+        table.insert(row, line:sub(start_pos))
+        break
+      end
+      table.insert(row, line:sub(start_pos, sep_pos - 1))
+      start_pos = sep_pos + #separator
     end
     if #row > 0 then
       table.insert(rows, row)
