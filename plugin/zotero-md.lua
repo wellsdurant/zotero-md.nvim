@@ -21,3 +21,10 @@ end, {
   desc = "Debug Zotero database connection",
   nargs = "?",  -- Accept 0 or 1 arguments
 })
+
+vim.api.nvim_create_user_command("ZoteroInfo", function()
+  local zotero = require("zotero-md")
+  zotero.show_reference_info()
+end, {
+  desc = "Show Zotero reference info for link under cursor",
+})

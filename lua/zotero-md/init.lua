@@ -931,6 +931,134 @@ function M.debug_db(key)
   end
 end
 
+-- Show info for reference under cursor
+function M.show_reference_info()
+  -- Check if we're in a markdown file
+  if not is_markdown_file() then
+    vim.notify("ZoteroInfo only works in markdown files", vim.log.levels.WARN)
+    return
+  end
+
+  -- Get the current line and cursor position
+  local line = vim.api.nvim_get_current_line()
+  local col = vim.api.nvim_win_get_cursor(0)[2]
+
+  -- Find zotero:// link under cursor
+  local key = nil
+  for match in line:gmatch("zotero://select/library/items/([%w]+)") do
+    -- Check if cursor is within this link
+    local link_pattern = "zotero://select/library/items/" .. match
+    local start_pos, end_pos = line:find(vim.pesc(link_pattern), 1, true)
+    if start_pos and end_pos and col >= start_pos - 1 and col <= end_pos then
+      key = match
+      break
+    end
+  end
+
+  if not key then
+    vim.notify("No Zotero reference link found under cursor", vim.log.levels.WARN)
+    return
+  end
+
+  -- Load references
+  local references = load_references()
+  if not references or #references == 0 then
+    vim.notify("No Zotero references loaded", vim.log.levels.WARN)
+    return
+  end
+
+  -- Find the reference
+  local ref = nil
+  for _, r in ipairs(references) do
+    if r.itemKey == key then
+      ref = r
+      break
+    end
+  end
+
+  if not ref then
+    vim.notify("Reference not found: " .. key, vim.log.levels.WARN)
+    return
+  end
+
+  -- Build info message
+  local info = {}
+  table.insert(info, "=== Zotero Reference Info ===")
+  table.insert(info, "")
+  table.insert(info, "Title: " .. (ref.title or ""))
+  table.insert(info, "Authors: " .. (ref.authors or ""))
+  table.insert(info, "Year: " .. (ref.year or ""))
+  table.insert(info, "Type: " .. (ref.type or ""))
+  table.insert(info, "Publication: " .. (ref.publication or ""))
+
+  if ref.abbreviation and ref.abbreviation ~= "" then
+    table.insert(info, "Abbreviation: " .. ref.abbreviation)
+  end
+  if ref.organization and ref.organization ~= "" then
+    table.insert(info, "Organization: " .. ref.organization)
+  end
+  if ref.eventshort and ref.eventshort ~= "" then
+    table.insert(info, "Event: " .. ref.eventshort)
+  end
+  if ref.url and ref.url ~= "" then
+    table.insert(info, "URL: " .. ref.url)
+  end
+
+  table.insert(info, "")
+  table.insert(info, "Key: " .. ref.itemKey)
+  table.insert(info, "Zotero URI: " .. ref.zotero_uri)
+
+  if ref.abstract and ref.abstract ~= "" then
+    table.insert(info, "")
+    table.insert(info, "Abstract:")
+    -- Wrap abstract text
+    local abstract_lines = vim.split(ref.abstract, " ")
+    local current_line = ""
+    for _, word in ipairs(abstract_lines) do
+      if #current_line + #word + 1 > 80 then
+        table.insert(info, current_line)
+        current_line = word
+      else
+        if current_line == "" then
+          current_line = word
+        else
+          current_line = current_line .. " " .. word
+        end
+      end
+    end
+    if current_line ~= "" then
+      table.insert(info, current_line)
+    end
+  end
+
+  -- Show in floating window
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, info)
+  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+  vim.api.nvim_buf_set_option(buf, 'filetype', 'markdown')
+
+  local width = math.min(100, vim.o.columns - 4)
+  local height = math.min(#info + 2, vim.o.lines - 4)
+
+  local opts = {
+    relative = 'cursor',
+    width = width,
+    height = height,
+    row = 1,
+    col = 0,
+    style = 'minimal',
+    border = 'rounded',
+  }
+
+  local win = vim.api.nvim_open_win(buf, true, opts)
+  vim.api.nvim_win_set_option(win, 'wrap', true)
+  vim.api.nvim_win_set_option(win, 'linebreak', true)
+
+  -- Close on q or Esc
+  vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = buf, silent = true })
+  vim.keymap.set('n', '<Esc>', '<cmd>close<cr>', { buffer = buf, silent = true })
+end
+
 -- Setup keymaps
 local function setup_keymaps()
   if not config.keymaps or config.keymaps == false then
@@ -944,6 +1072,11 @@ local function setup_keymaps()
       end
     end, { desc = "Pick Zotero reference" })
   end
+
+  -- Add <leader>zi keymap for showing reference info
+  vim.keymap.set("n", "<leader>zi", function()
+    M.show_reference_info()
+  end, { desc = "Show Zotero reference info" })
 end
 
 -- Setup function

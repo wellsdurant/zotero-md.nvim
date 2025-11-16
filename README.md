@@ -112,11 +112,13 @@ require("zotero-md").setup({
 ### Commands
 
 - `:ZoteroPick` - Open Telescope picker to select and insert a Zotero reference
+- `:ZoteroInfo` - Show detailed info for the Zotero reference link under cursor
 - `:ZoteroDebug` - Debug database connection and show diagnostic information
 
 ### Keymaps
 
-By default, `<C-z>` in insert mode opens the picker (only in markdown files).
+- `<C-z>` in insert mode - Opens the picker (only in markdown files)
+- `<leader>zi` in normal mode - Shows detailed reference info for link under cursor
 
 ### Citation Format
 
