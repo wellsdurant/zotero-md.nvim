@@ -246,6 +246,7 @@ local function load_references_from_db()
       items.itemID,
       items.key,
       itemTypes.typeName,
+      items.dateModified,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'title' THEN itemDataValues.value END) as title,
       GROUP_CONCAT(CASE WHEN fields.fieldName = 'date' THEN itemDataValues.value END) as date,
       COALESCE(
@@ -273,6 +274,7 @@ local function load_references_from_db()
     WHERE items.itemID NOT IN (SELECT itemID FROM deletedItems)
       AND itemTypes.typeName NOT IN ('attachment', 'note')
     GROUP BY items.itemID
+    ORDER BY items.dateModified DESC
     LIMIT 1000
   ]]
 
@@ -295,12 +297,13 @@ local function load_references_from_db()
       local item_id = row[1]
       local item_key = row[2]
       local item_type = row[3]
-      local title = row[4] or "Untitled"
-      local date = row[5] or ""
-      local publication = row[6] or ""
-      local url = row[7] or ""
-      local extra = row[8] or ""
-      local abstract = row[9] or ""
+      local date_modified = row[4] or ""
+      local title = row[5] or "Untitled"
+      local date = row[6] or ""
+      local publication = row[7] or ""
+      local url = row[8] or ""
+      local extra = row[9] or ""
+      local abstract = row[10] or ""
 
       -- Extract year from date
       local year = date:match("(%d%d%d%d)") or ""
