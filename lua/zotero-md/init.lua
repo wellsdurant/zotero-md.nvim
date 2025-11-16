@@ -943,16 +943,29 @@ function M.show_reference_info()
   local line = vim.api.nvim_get_current_line()
   local col = vim.api.nvim_win_get_cursor(0)[2]
 
-  -- Find zotero:// link under cursor
+  -- Find markdown link with zotero:// URL under cursor
+  -- Pattern: [text](zotero://select/library/items/KEY)
   local key = nil
-  for match in line:gmatch("zotero://select/library/items/([%w]+)") do
-    -- Check if cursor is within this link
-    local link_pattern = "zotero://select/library/items/" .. match
-    local start_pos, end_pos = line:find(vim.pesc(link_pattern), 1, true)
-    if start_pos and end_pos and col >= start_pos - 1 and col <= end_pos then
-      key = match
+  local search_pos = 1
+  while true do
+    -- Find the next markdown link with zotero URL
+    local link_start, link_end, display_text, item_key = line:find(
+      "%[([^%]]+)%]%(zotero://select/library/items/([%w]+)%)",
+      search_pos
+    )
+
+    if not link_start then
       break
     end
+
+    -- Check if cursor is within this entire markdown link (including brackets)
+    -- Lua string positions are 1-indexed, cursor col is 0-indexed
+    if col >= link_start - 1 and col <= link_end then
+      key = item_key
+      break
+    end
+
+    search_pos = link_end + 1
   end
 
   if not key then
