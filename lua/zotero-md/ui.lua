@@ -173,6 +173,18 @@ local function create_previewer(preview_format)
   })
 end
 
+-- Build ordinal string from configured search fields
+local function build_ordinal(entry, search_fields)
+  local parts = {}
+  for _, field in ipairs(search_fields) do
+    local value = entry[field]
+    if value and value ~= "" then
+      table.insert(parts, value)
+    end
+  end
+  return table.concat(parts, " ")
+end
+
 -- Show Telescope picker for reference selection
 function M.show_picker(references, config, on_select)
   -- Check if we're in a markdown file
@@ -239,12 +251,7 @@ function M.show_picker(references, config, on_select)
               { pub_text, "Include" },
             })
           end,
-          ordinal = (entry.abbreviation and entry.abbreviation ~= "" and "(" .. entry.abbreviation .. ") " or "")
-            .. (entry.title or "")
-            .. " "
-            .. (entry.authors or "")
-            .. " "
-            .. (entry.year or ""),
+          ordinal = build_ordinal(entry, config.search_fields or { "title", "year", "authors" }),
         }
       end,
     }),

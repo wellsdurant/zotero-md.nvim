@@ -59,6 +59,8 @@ Setup with default options: >
       cache_file = vim.fn.expand("~/.local/share/nvim/zotero-md-cache.json"),
       cache_expiration = 3600,
       citation_format = "{title} ({year})",
+      preview_format = "{title}, {year}, {authors}, {publication}, {abstract}",
+      search_fields = { "title", "year", "authors" },
       preload = true,
       preload_delay = 1000,
       auto_update = true,
@@ -87,6 +89,10 @@ Options:
                                      {publication}, {type}, {abstract},
                                      {abbreviation}, {organization},
                                      {eventshort}
+  preview_format        Format string for preview pane
+                        Same placeholders as citation_format
+  search_fields         List of fields to search in Telescope picker
+                        Default: { "title", "year", "authors" }
   preload               Load references on startup
   preload_delay         Delay before preloading (milliseconds)
   auto_update           Auto-update on markdown file open

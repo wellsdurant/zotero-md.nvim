@@ -77,6 +77,9 @@ require("zotero-md").setup({
   -- Telescope preview format (customize how references are shown in preview pane)
   preview_format = "{title}, {year}, {authors}, {publication}, {abstract}",
 
+  -- Fields to use for searching in Telescope picker
+  search_fields = { "title", "year", "authors" },
+
   -- Preload references on startup
   preload = true,
 
@@ -177,6 +180,28 @@ preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}),
 ```
 
 **Note:** Empty parentheses, brackets, and extra commas are automatically cleaned up if placeholders are empty.
+
+### Search Fields
+
+The `search_fields` option controls which fields are searchable in the Telescope picker. By default, you can search by title, year, and authors.
+
+**Available fields**: `title`, `year`, `authors`, `publication`, `type`, `abbreviation`, `organization`, `eventshort`, `abstract`, `key`
+
+```lua
+-- Default: search by title, year, and authors
+search_fields = { "title", "year", "authors" }
+
+-- Search by title and publication only
+search_fields = { "title", "publication" }
+
+-- Search by all metadata fields
+search_fields = { "title", "year", "authors", "publication", "type", "organization" }
+
+-- Search by title, abbreviation, and key (useful for debugging)
+search_fields = { "title", "abbreviation", "key" }
+```
+
+**Tip**: Keep the list short for faster searching. Adding more fields increases search scope but may make it harder to find specific items.
 
 ### Using Zotero Extra Field
 

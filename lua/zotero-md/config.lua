@@ -8,6 +8,7 @@ M.defaults = {
   cache_expiration = 3600, -- 1 hour in seconds
   citation_format = "{title} ({year})",
   preview_format = "{title}, {year}, {authors}, {publication}, {abstract}",
+  search_fields = { "title", "year", "authors" }, -- Fields to search in Telescope
   preload = true,
   preload_delay = 1000, -- milliseconds
   auto_update = true,
