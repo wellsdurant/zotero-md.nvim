@@ -795,11 +795,31 @@ function M.debug_db(key)
           print(string.format("Publication: %s", r.publication or "(empty)"))
           print(string.format("Abstract: %s", r.abstract and r.abstract:sub(1, 100) .. "..." or "(empty)"))
           print(string.format("URL: %s", r.url or "(empty)"))
+
+          -- Show raw extra field from query
+          local extra_query = string.format([[
+            SELECT itemDataValues.value
+            FROM items
+            JOIN itemData ON items.itemID = itemData.itemID
+            JOIN fields ON itemData.fieldID = fields.fieldID
+            JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
+            WHERE items.key = '%s' AND fields.fieldName = 'extra'
+          ]], key)
+          local extra_result, extra_err = execute_sqlite_query(db_path, extra_query)
+          if extra_result and extra_result ~= "" then
+            print("\nRaw Extra field from database:")
+            print("---START---")
+            print(extra_result)
+            print("---END---")
+          end
+
           if r.extra_fields and next(r.extra_fields) then
-            print("Extra fields parsed:")
+            print("\nExtra fields parsed:")
             for k, v in pairs(r.extra_fields) do
               print(string.format("  %s: %s", k, v))
             end
+          else
+            print("\nExtra fields parsed: (none)")
           end
 
           -- Add raw SQL debug for this specific item
