@@ -220,6 +220,55 @@ If you're using a custom Zotero data directory, you can find it in Zotero:
 4. **Auto-Update**: When opening markdown files, the cache automatically refreshes (max once per 5 minutes)
 5. **Markdown-Only**: The picker only activates in markdown files to prevent accidental insertions
 
+## Architecture
+
+The plugin is organized into modular components for easy maintenance and extension:
+
+### Module Structure
+
+```
+lua/zotero-md/
+├── init.lua        # Main entry point and orchestration
+├── config.lua      # Configuration management
+├── cache.lua       # In-memory and file-based caching
+├── database.lua    # SQLite database queries
+├── parser.lua      # Extra field and citation formatting
+├── ui.lua          # Telescope picker and floating windows
+└── utils.lua       # Shared utility functions
+```
+
+### Key Components
+
+- **config.lua**: Manages default and user configuration, provides accessor methods
+- **cache.lua**: Handles in-memory caching and JSON file persistence
+- **database.lua**: Executes SQLite queries, handles temp database copying, loads references with complex joins
+- **parser.lua**: Parses Zotero Extra field (key:value pairs), formats citations with placeholders
+- **ui.lua**: Creates Telescope picker with dynamic columns, floating info windows, link detection
+- **utils.lua**: Common functions like markdown detection and SQLite result parsing
+
+### Database Query Strategy
+
+The plugin uses an optimized two-query approach (inspired by zotcite):
+
+1. **Authors Query**: Fetches ALL authors at once with priority sorting (author > artist > performer...)
+2. **Items Query**: Fetches item metadata with COALESCE fallback chains for publication fields
+
+This avoids N+1 query problems and loads 1000+ references in milliseconds.
+
+### Data Flow
+
+```
+User Action → init.lua → load_references()
+                            ↓
+                        cache.lua (check validity)
+                            ↓
+                        database.lua (if cache invalid)
+                            ↓
+                        parser.lua (format citations)
+                            ↓
+                        ui.lua (show picker/info)
+```
+
 ## Troubleshooting
 
 ### "Database is locked" error
