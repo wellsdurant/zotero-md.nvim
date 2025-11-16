@@ -631,30 +631,55 @@ function M.pick_reference()
           :gsub(",%s*$", "")  -- Remove trailing comma
           :gsub("%s+", " ")  -- Collapse spaces again after cleanup
 
-        -- Third pass: replace markers with values and track highlight positions
-        -- Process in order of appearance in format string
-        local highlights = {}
+        -- Third pass: find all markers and their positions, then process left-to-right
+        local marker_positions = {}
         for _, ph in ipairs(placeholder_values) do
           if markers_to_replace[ph.marker] then
-            local data = markers_to_replace[ph.marker]
-            local start_idx = 1
+            local pos = 1
             while true do
-              local found_start, found_end = preview_text:find(vim.pesc(ph.marker), start_idx, true)
+              local found_start, found_end = preview_text:find(vim.pesc(ph.marker), pos, true)
               if not found_start then
                 break
               end
-              -- Replace marker with actual value
-              preview_text = preview_text:sub(1, found_start - 1) .. data.value .. preview_text:sub(found_end + 1)
-              -- Record highlight position
-              table.insert(highlights, {
-                group = data.group,
-                start_pos = found_start - 1,  -- 0-indexed
-                end_pos = found_start - 1 + #data.value,  -- 0-indexed, exclusive
+              table.insert(marker_positions, {
+                marker = ph.marker,
+                start_pos = found_start,
+                end_pos = found_end,
+                data = markers_to_replace[ph.marker],
               })
-              -- Update search position (account for length difference)
-              start_idx = found_start + #data.value
+              pos = found_end + 1
             end
           end
+        end
+
+        -- Sort by position (left to right)
+        table.sort(marker_positions, function(a, b)
+          return a.start_pos < b.start_pos
+        end)
+
+        -- Replace markers and record highlights in left-to-right order
+        local highlights = {}
+        local offset = 0  -- Track position shift from replacements
+        for _, marker_info in ipairs(marker_positions) do
+          local adjusted_start = marker_info.start_pos + offset
+          local adjusted_end = marker_info.end_pos + offset
+          local marker_len = adjusted_end - adjusted_start + 1
+          local value_len = #marker_info.data.value
+
+          -- Replace marker with value
+          preview_text = preview_text:sub(1, adjusted_start - 1)
+            .. marker_info.data.value
+            .. preview_text:sub(adjusted_end + 1)
+
+          -- Record highlight position
+          table.insert(highlights, {
+            group = marker_info.data.group,
+            start_pos = adjusted_start - 1,  -- 0-indexed
+            end_pos = adjusted_start - 1 + value_len,  -- 0-indexed, exclusive
+          })
+
+          -- Update offset for next replacement
+          offset = offset + (value_len - marker_len)
         end
 
         local bufnr = self.state.bufnr
