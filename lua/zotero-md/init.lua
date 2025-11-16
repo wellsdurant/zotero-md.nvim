@@ -581,32 +581,32 @@ function M.pick_reference()
 
         -- Define placeholders with values and highlight groups
         local placeholder_values = {
-          { pattern = "{abbreviation}", value = ref.abbreviation or "", group = "String" },
-          { pattern = "{title}", value = ref.title or "", group = "Title" },
-          { pattern = "{year}", value = ref.year or "", group = "Number" },
-          { pattern = "{authors}", value = ref.authors or "", group = "Identifier" },
-          { pattern = "{organization}", value = ref.organization or "", group = "Comment" },
-          { pattern = "{publication}", value = ref.publication or "", group = "Include" },
-          { pattern = "{eventshort}", value = ref.eventshort or "", group = "Include" },
-          { pattern = "{type}", value = ref.type or "", group = "Comment" },
-          { pattern = "{url}", value = ref.url or "", group = "Underlined" },
-          { pattern = "{abstract}", value = ref.abstract or "", group = "Comment" },
+          { pattern = "{abbreviation}", value = ref.abbreviation or "", group = "String", marker = "\x01ABR\x01" },
+          { pattern = "{title}", value = ref.title or "", group = "Title", marker = "\x01TTL\x01" },
+          { pattern = "{year}", value = ref.year or "", group = "Number", marker = "\x01YR\x01" },
+          { pattern = "{authors}", value = ref.authors or "", group = "Identifier", marker = "\x01AUT\x01" },
+          { pattern = "{organization}", value = ref.organization or "", group = "Comment", marker = "\x01ORG\x01" },
+          { pattern = "{publication}", value = ref.publication or "", group = "Include", marker = "\x01PUB\x01" },
+          { pattern = "{eventshort}", value = ref.eventshort or "", group = "Include", marker = "\x01EVT\x01" },
+          { pattern = "{type}", value = ref.type or "", group = "Comment", marker = "\x01TYP\x01" },
+          { pattern = "{url}", value = ref.url or "", group = "Underlined", marker = "\x01URL\x01" },
+          { pattern = "{abstract}", value = ref.abstract or "", group = "Comment", marker = "\x01ABS\x01" },
         }
 
-        -- First pass: substitute placeholders
+        -- First pass: replace placeholders with unique markers (or remove if empty)
         local preview_text = format
-        local value_to_group = {}  -- Map values to their highlight groups
+        local markers_to_replace = {}  -- Track markers that need to be replaced with values
         for _, ph in ipairs(placeholder_values) do
           if ph.value ~= "" then
-            preview_text = preview_text:gsub(vim.pesc(ph.pattern), ph.value)
-            value_to_group[ph.value] = ph.group
+            preview_text = preview_text:gsub(vim.pesc(ph.pattern), ph.marker)
+            markers_to_replace[ph.marker] = { value = ph.value, group = ph.group }
           else
             -- Remove empty placeholders
             preview_text = preview_text:gsub(vim.pesc(ph.pattern), "")
           end
         end
 
-        -- Second pass: cleanup formatting
+        -- Second pass: cleanup formatting (markers preserve positions)
         preview_text = preview_text
           :gsub("%s+", " ")  -- Collapse multiple spaces
           :gsub("^%s+", "")  -- Trim leading space
@@ -618,23 +618,29 @@ function M.pick_reference()
           :gsub(",%s*$", "")  -- Remove trailing comma
           :gsub("%s+", " ")  -- Collapse spaces again after cleanup
 
-        -- Third pass: calculate highlight positions in cleaned text
+        -- Third pass: replace markers with values and track highlight positions
+        -- Process in order of appearance in format string
         local highlights = {}
-        for value, group in pairs(value_to_group) do
-          -- Find all occurrences of this value in the text
-          local start_idx = 1
-          while true do
-            local found_start, found_end = preview_text:find(vim.pesc(value), start_idx, true)
-            if not found_start then
-              break
+        for _, ph in ipairs(placeholder_values) do
+          if markers_to_replace[ph.marker] then
+            local data = markers_to_replace[ph.marker]
+            local start_idx = 1
+            while true do
+              local found_start, found_end = preview_text:find(vim.pesc(ph.marker), start_idx, true)
+              if not found_start then
+                break
+              end
+              -- Replace marker with actual value
+              preview_text = preview_text:sub(1, found_start - 1) .. data.value .. preview_text:sub(found_end + 1)
+              -- Record highlight position
+              table.insert(highlights, {
+                group = data.group,
+                start_pos = found_start - 1,  -- 0-indexed
+                end_pos = found_start - 1 + #data.value,  -- 0-indexed, exclusive
+              })
+              -- Update search position (account for length difference)
+              start_idx = found_start + #data.value
             end
-            table.insert(highlights, {
-              group = group,
-              start_pos = found_start - 1,  -- 0-indexed
-              end_pos = found_end,  -- 0-indexed, exclusive
-              value = value,
-            })
-            start_idx = found_end + 1
           end
         end
 
