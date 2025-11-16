@@ -766,6 +766,13 @@ function M.debug_db()
         local r = refs[i]
         print(string.format("%d. Title: %s | Authors: %s | Year: %s | Type: %s",
           i, r.title, r.authors, r.year, r.type))
+        print(string.format("   Publication: %s", r.publication or "(empty)"))
+        if r.extra_fields and next(r.extra_fields) then
+          print("   Extra fields parsed:")
+          for k, v in pairs(r.extra_fields) do
+            print(string.format("     %s: %s", k, v))
+          end
+        end
       end
     end
   else
