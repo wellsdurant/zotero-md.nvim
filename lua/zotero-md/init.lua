@@ -789,6 +789,39 @@ function M.debug_db(key)
             print("Error querying raw data: " .. (raw_err or "unknown"))
           end
 
+          -- Test the actual SELECT query for this specific item
+          print("\n--- Main Query Result ---")
+          local test_query = string.format([[
+            SELECT
+              items.key,
+              GROUP_CONCAT(CASE WHEN fields.fieldName = 'title' THEN itemDataValues.value END) as title,
+              GROUP_CONCAT(CASE WHEN fields.fieldName = 'date' THEN itemDataValues.value END) as date,
+              COALESCE(
+                GROUP_CONCAT(CASE WHEN fields.fieldName = 'publicationTitle' THEN itemDataValues.value END),
+                GROUP_CONCAT(CASE WHEN fields.fieldName = 'bookTitle' THEN itemDataValues.value END),
+                GROUP_CONCAT(CASE WHEN fields.fieldName = 'publisher' THEN itemDataValues.value END)
+              ) as publication
+            FROM items
+            LEFT JOIN itemTypes ON items.itemTypeID = itemTypes.itemTypeID
+            LEFT JOIN itemData ON items.itemID = itemData.itemID
+            LEFT JOIN fields ON itemData.fieldID = fields.fieldID
+            LEFT JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
+            WHERE items.key = '%s'
+            GROUP BY items.itemID
+          ]], key)
+          local test_result, test_err = execute_sqlite_query(db_path, test_query)
+          if test_result then
+            local test_rows = parse_sqlite_result(test_result)
+            if #test_rows > 0 then
+              print(string.format("  key = %s", test_rows[1][1] or "(null)"))
+              print(string.format("  title = %s", test_rows[1][2] or "(null)"))
+              print(string.format("  date = %s", test_rows[1][3] or "(null)"))
+              print(string.format("  publication = %s", test_rows[1][4] or "(null)"))
+            end
+          else
+            print("Error running main query: " .. (test_err or "unknown"))
+          end
+
           break
         end
       end
