@@ -578,57 +578,36 @@ function M.pick_reference()
 
         -- Build preview using configurable format
         local format = config.preview_format
-        local highlights = {}
-        local pos = 0
-        local parts = {}
 
-        -- Process format character by character, tracking positions
-        local i = 1
-        while i <= #format do
-          local found_placeholder = false
+        -- Define placeholders with values and highlight groups
+        local placeholder_values = {
+          { pattern = "{abbreviation}", value = ref.abbreviation or "", group = "String" },
+          { pattern = "{title}", value = ref.title or "", group = "Title" },
+          { pattern = "{year}", value = ref.year or "", group = "Number" },
+          { pattern = "{authors}", value = ref.authors or "", group = "Identifier" },
+          { pattern = "{organization}", value = ref.organization or "", group = "Comment" },
+          { pattern = "{publication}", value = ref.publication or "", group = "Include" },
+          { pattern = "{eventshort}", value = ref.eventshort or "", group = "Include" },
+          { pattern = "{type}", value = ref.type or "", group = "Comment" },
+          { pattern = "{url}", value = ref.url or "", group = "Underlined" },
+          { pattern = "{abstract}", value = ref.abstract or "", group = "Comment" },
+        }
 
-          -- Check for placeholders
-          local placeholders = {
-            { pattern = "{abbreviation}", value = ref.abbreviation or "", group = "String" },
-            { pattern = "{title}", value = ref.title or "", group = "Title" },
-            { pattern = "{year}", value = ref.year or "", group = "Number" },
-            { pattern = "{authors}", value = ref.authors or "", group = "Identifier" },
-            { pattern = "{organization}", value = ref.organization or "", group = "Comment" },
-            { pattern = "{publication}", value = ref.publication or "", group = "Include" },
-            { pattern = "{eventshort}", value = ref.eventshort or "", group = "Include" },
-            { pattern = "{type}", value = ref.type or "", group = "Comment" },
-            { pattern = "{url}", value = ref.url or "", group = "Underlined" },
-            { pattern = "{abstract}", value = ref.abstract or "", group = "Comment" },
-          }
-
-          for _, ph in ipairs(placeholders) do
-            if format:sub(i, i + #ph.pattern - 1) == ph.pattern then
-              if ph.value ~= "" then
-                table.insert(parts, ph.value)
-                table.insert(highlights, {
-                  group = ph.group,
-                  start_pos = pos,
-                  end_pos = pos + #ph.value,
-                })
-                pos = pos + #ph.value
-              end
-              i = i + #ph.pattern
-              found_placeholder = true
-              break
-            end
-          end
-
-          -- If no placeholder found, copy the character
-          if not found_placeholder then
-            local char = format:sub(i, i)
-            table.insert(parts, char)
-            pos = pos + #char
-            i = i + 1
+        -- First pass: substitute placeholders
+        local preview_text = format
+        local value_to_group = {}  -- Map values to their highlight groups
+        for _, ph in ipairs(placeholder_values) do
+          if ph.value ~= "" then
+            preview_text = preview_text:gsub(vim.pesc(ph.pattern), ph.value)
+            value_to_group[ph.value] = ph.group
+          else
+            -- Remove empty placeholders
+            preview_text = preview_text:gsub(vim.pesc(ph.pattern), "")
           end
         end
 
-        -- Build final text with cleanup
-        local preview_text = table.concat(parts)
+        -- Second pass: cleanup formatting
+        preview_text = preview_text
           :gsub("%s+", " ")  -- Collapse multiple spaces
           :gsub("^%s+", "")  -- Trim leading space
           :gsub("%s*%(%s*%)", "")  -- Remove empty parentheses with optional spaces
@@ -638,6 +617,26 @@ function M.pick_reference()
           :gsub("^%s*,", "")  -- Remove leading comma
           :gsub(",%s*$", "")  -- Remove trailing comma
           :gsub("%s+", " ")  -- Collapse spaces again after cleanup
+
+        -- Third pass: calculate highlight positions in cleaned text
+        local highlights = {}
+        for value, group in pairs(value_to_group) do
+          -- Find all occurrences of this value in the text
+          local start_idx = 1
+          while true do
+            local found_start, found_end = preview_text:find(vim.pesc(value), start_idx, true)
+            if not found_start then
+              break
+            end
+            table.insert(highlights, {
+              group = group,
+              start_pos = found_start - 1,  -- 0-indexed
+              end_pos = found_end,  -- 0-indexed, exclusive
+              value = value,
+            })
+            start_idx = found_end + 1
+          end
+        end
 
         local bufnr = self.state.bufnr
         local winid = self.state.winid
