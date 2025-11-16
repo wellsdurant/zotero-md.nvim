@@ -252,6 +252,7 @@ local function load_references_from_db()
       COALESCE(
         GROUP_CONCAT(CASE WHEN fields.fieldName = 'publicationTitle' THEN itemDataValues.value END),
         GROUP_CONCAT(CASE WHEN fields.fieldName = 'bookTitle' THEN itemDataValues.value END),
+        GROUP_CONCAT(CASE WHEN fields.fieldName = 'publisher' THEN itemDataValues.value END),
         GROUP_CONCAT(CASE WHEN fields.fieldName = 'proceedingsTitle' THEN itemDataValues.value END),
         GROUP_CONCAT(CASE WHEN fields.fieldName = 'conferenceName' THEN itemDataValues.value END),
         GROUP_CONCAT(CASE WHEN fields.fieldName = 'programTitle' THEN itemDataValues.value END),
