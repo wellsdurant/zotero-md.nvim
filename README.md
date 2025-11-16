@@ -75,7 +75,7 @@ require("zotero-md").setup({
   citation_format = "{title} ({year})",
 
   -- Telescope preview format (customize how references are shown in preview pane)
-  preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})\n\n{abstract}",
+  preview_format = "{title}, {year}, {authors}, {publication}, {abstract}",
 
   -- Preload references on startup
   preload = true,
@@ -160,15 +160,17 @@ The `preview_format` option customizes how references are displayed in the Teles
 **The preview shows ONLY what you specify** - no additional fields are automatically added.
 
 ```lua
--- Default: (GPT2) Visual Autoregressive Modeling, 2024, Radford et al., (OpenAI), arXiv (ICML 2019)
---          [followed by abstract on new lines]
-preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})\n\n{abstract}"
+-- Default: Visual Autoregressive Modeling, 2024, Radford et al., arXiv, [abstract text]
+preview_format = "{title}, {year}, {authors}, {publication}, {abstract}"
 
 -- Minimal: Visual Autoregressive Modeling, 2024, Radford et al.
 preview_format = "{title}, {year}, {authors}"
 
 -- Academic: Radford et al. (2024). Visual Autoregressive Modeling. arXiv
 preview_format = "{authors} ({year}). {title}. {publication}"
+
+-- With custom Extra fields: (GPT2) Visual Autoregressive Modeling, 2024, Radford et al., (OpenAI), arXiv (ICML 2019)
+preview_format = "({abbreviation}) {title}, {year}, {authors}, ({organization}), {publication} ({eventshort})"
 ```
 
 **Tip:** Design your format to avoid empty parentheses. Use `"{abbreviation} {title}"` instead of `"({abbreviation}) {title}"` if the field might be empty.
