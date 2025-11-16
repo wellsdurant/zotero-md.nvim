@@ -737,14 +737,23 @@ function M.debug_db()
   if refs then
     print("Successfully loaded " .. #refs .. " references")
 
-    -- Count untitled entries
+    -- Count untitled entries and their types
     local untitled_count = 0
+    local untitled_types = {}
     for _, r in ipairs(refs) do
       if r.title == "Untitled" then
         untitled_count = untitled_count + 1
+        untitled_types[r.type] = (untitled_types[r.type] or 0) + 1
       end
     end
     print("Untitled entries: " .. untitled_count)
+
+    if untitled_count > 0 then
+      print("\nUntitled entries by type:")
+      for item_type, count in pairs(untitled_types) do
+        print(string.format("  %s: %d", item_type, count))
+      end
+    end
 
     if #refs > 0 then
       print("\nFirst 5 references:")
