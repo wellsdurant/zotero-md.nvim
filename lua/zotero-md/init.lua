@@ -766,6 +766,29 @@ function M.debug_db(key)
               print(string.format("  %s: %s", k, v))
             end
           end
+
+          -- Add raw SQL debug for this specific item
+          print("\n--- Raw SQL Debug ---")
+          local raw_query = string.format([[
+            SELECT fields.fieldName, itemDataValues.value
+            FROM items
+            JOIN itemData ON items.itemID = itemData.itemID
+            JOIN fields ON itemData.fieldID = fields.fieldID
+            JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
+            WHERE items.key = '%s'
+            ORDER BY fields.fieldName
+          ]], key)
+          local raw_result, raw_err = execute_sqlite_query(db_path, raw_query)
+          if raw_result then
+            local raw_rows = parse_sqlite_result(raw_result)
+            print("All fields from database:")
+            for _, row in ipairs(raw_rows) do
+              print(string.format("  %s = %s", row[1] or "", row[2] or ""))
+            end
+          else
+            print("Error querying raw data: " .. (raw_err or "unknown"))
+          end
+
           break
         end
       end
