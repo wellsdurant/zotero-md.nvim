@@ -14,9 +14,10 @@ end, {
   desc = "Pick a Zotero reference and insert into markdown",
 })
 
-vim.api.nvim_create_user_command("ZoteroDebug", function()
+vim.api.nvim_create_user_command("ZoteroDebug", function(opts)
   local zotero = require("zotero-md")
-  zotero.debug_db()
+  zotero.debug_db(opts.args)
 end, {
   desc = "Debug Zotero database connection",
+  nargs = "?",  -- Accept 0 or 1 arguments
 })

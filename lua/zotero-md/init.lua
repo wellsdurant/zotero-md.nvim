@@ -716,7 +716,7 @@ local function setup_auto_update()
 end
 
 -- Debug function to test database connection
-function M.debug_db()
+function M.debug_db(key)
   local db_path = config.zotero_db_path or default_config.zotero_db_path
 
   print("Zotero Database Path: " .. db_path)
@@ -743,6 +743,36 @@ function M.debug_db()
   if refs then
     print("Successfully loaded " .. #refs .. " references")
 
+    -- If a specific key is provided, show only that item
+    if key and key ~= "" then
+      print("\nSearching for item with key: " .. key)
+      local found = false
+      for _, r in ipairs(refs) do
+        if r.itemKey == key then
+          found = true
+          print(string.format("\nTitle: %s", r.title))
+          print(string.format("Key: %s", r.itemKey))
+          print(string.format("Authors: %s", r.authors))
+          print(string.format("Year: %s", r.year))
+          print(string.format("Type: %s", r.type))
+          print(string.format("Publication: %s", r.publication or "(empty)"))
+          print(string.format("Abstract: %s", r.abstract and r.abstract:sub(1, 100) .. "..." or "(empty)"))
+          print(string.format("URL: %s", r.url or "(empty)"))
+          if r.extra_fields and next(r.extra_fields) then
+            print("Extra fields parsed:")
+            for k, v in pairs(r.extra_fields) do
+              print(string.format("  %s: %s", k, v))
+            end
+          end
+          break
+        end
+      end
+      if not found then
+        print("ERROR: Item with key '" .. key .. "' not found")
+      end
+      return
+    end
+
     -- Count untitled entries and their types
     local untitled_count = 0
     local untitled_types = {}
@@ -765,8 +795,8 @@ function M.debug_db()
       print("\nFirst 5 references:")
       for i = 1, math.min(5, #refs) do
         local r = refs[i]
-        print(string.format("%d. Title: %s | Authors: %s | Year: %s | Type: %s",
-          i, r.title, r.authors, r.year, r.type))
+        print(string.format("%d. Title: %s | Authors: %s | Year: %s | Type: %s | Key: %s",
+          i, r.title, r.authors, r.year, r.type, r.itemKey))
         print(string.format("   Publication: %s", r.publication or "(empty)"))
         if r.extra_fields and next(r.extra_fields) then
           print("   Extra fields parsed:")
