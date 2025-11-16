@@ -770,20 +770,21 @@ function M.debug_db(key)
           -- Add raw SQL debug for this specific item
           print("\n--- Raw SQL Debug ---")
           local raw_query = string.format([[
-            SELECT fields.fieldName, itemDataValues.value
+            SELECT fields.fieldName, itemDataValues.value, itemData.itemID, itemData.fieldID, itemData.valueID
             FROM items
             JOIN itemData ON items.itemID = itemData.itemID
             JOIN fields ON itemData.fieldID = fields.fieldID
             JOIN itemDataValues ON itemData.valueID = itemDataValues.valueID
             WHERE items.key = '%s'
-            ORDER BY fields.fieldName
+            ORDER BY itemData.itemID, itemData.fieldID
           ]], key)
           local raw_result, raw_err = execute_sqlite_query(db_path, raw_query)
           if raw_result then
             local raw_rows = parse_sqlite_result(raw_result)
-            print("All fields from database:")
+            print("All itemData rows (fieldName | value | itemID | fieldID | valueID):")
             for _, row in ipairs(raw_rows) do
-              print(string.format("  %s = %s", row[1] or "", row[2] or ""))
+              print(string.format("  %s | %s | %s | %s | %s",
+                row[1] or "(null)", row[2] or "(null)", row[3] or "(null)", row[4] or "(null)", row[5] or "(null)"))
             end
           else
             print("Error querying raw data: " .. (raw_err or "unknown"))
