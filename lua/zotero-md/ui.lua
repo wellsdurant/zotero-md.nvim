@@ -210,10 +210,13 @@ function M.show_picker(references, config, on_select)
   -- Calculate dynamic column widths
   local title_width, year_width, author_width, org_width, pub_width = calculate_column_widths(references)
 
+  -- Build search hint from configured fields
+  local search_hint = "searches: " .. table.concat(config.search_fields or { "title", "year", "authors" }, ", ")
+
   -- Create picker
   local opts = {
     prompt_title = "Search pattern",
-    results_title = "Zotero references",
+    results_title = "Zotero references (" .. search_hint .. ")",
     finder = finders.new_table({
       results = references,
       entry_maker = function(entry)
