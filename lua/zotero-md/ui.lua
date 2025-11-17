@@ -210,13 +210,10 @@ function M.show_picker(references, config, on_select)
   -- Calculate dynamic column widths
   local title_width, year_width, author_width, org_width, pub_width = calculate_column_widths(references)
 
-  -- Build search hint from configured fields
-  local search_hint = "searches: " .. table.concat(config.search_fields or { "title", "year", "authors" }, ", ")
-
   -- Create picker
   local opts = {
     prompt_title = "Search pattern",
-    results_title = "Zotero references (" .. search_hint .. ")",
+    results_title = "Zotero references",
     finder = finders.new_table({
       results = references,
       entry_maker = function(entry)
@@ -261,6 +258,39 @@ function M.show_picker(references, config, on_select)
     sorter = conf.generic_sorter({}),
     previewer = create_previewer(config.preview_format),
     attach_mappings = function(prompt_bufnr, map)
+      -- Setup virtual text placeholder hint
+      local ns_id = vim.api.nvim_create_namespace("zotero_placeholder")
+      local placeholder_hint = "searches: " .. table.concat(config.search_fields or { "title", "year", "authors" }, ", ")
+      local prompt_prefix = conf.prompt_prefix or "> "
+      local prefix_width = vim.fn.strdisplaywidth(prompt_prefix)
+
+      local function update_placeholder()
+        local current_picker = action_state.get_current_picker(prompt_bufnr)
+        if not current_picker then
+          return
+        end
+
+        local prompt_text = current_picker:_get_prompt()
+        vim.api.nvim_buf_clear_namespace(prompt_bufnr, ns_id, 0, -1)
+
+        if prompt_text == "" then
+          vim.api.nvim_buf_set_extmark(prompt_bufnr, ns_id, 0, 0, {
+            virt_text = { { placeholder_hint, "Comment" } },
+            virt_text_win_col = prefix_width,
+            priority = 100,
+          })
+        end
+      end
+
+      -- Initial placeholder
+      vim.schedule(update_placeholder)
+
+      -- Update on text changes
+      vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+        buffer = prompt_bufnr,
+        callback = update_placeholder,
+      })
+
       map({ "i", "n" }, "<CR>", function()
         local selection = action_state.get_selected_entry()
         actions.close(prompt_bufnr)
